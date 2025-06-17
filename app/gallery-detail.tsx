@@ -1,16 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -47,6 +47,7 @@ const GalleryDetailPage = () => {
       'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=600&fit=crop'
     ],
     artist: {
+      id: 'artist_001', // 添加画师ID
       name: artistName || 'Little Cookie Fox',
       rating: 5.0,
       reviewCount: 208,
@@ -137,7 +138,7 @@ No.2 Modification Related:
     }
   ];
 
-  // 添加各部分的ref引用
+  // 添加各部分的ref引用 - 使用useRef<View>类型
   const galleryRef = useRef<View>(null);
   const detailsRef = useRef<View>(null);
   const reviewsRef = useRef<View>(null);
@@ -179,29 +180,43 @@ No.2 Modification Related:
     });
   };
 
+  const handlePaymentSuccess = () => {
+    // 购买成功后减少库存
+    setStock(prev => Math.max(0, prev - 1));
+  };
+
+  const [sectionOffsets, setSectionOffsets] = useState({
+    gallery: 0,
+    details: 0,
+    reviews: 0,
+    recommended: 0
+  });
+
   const scrollToSection = (section: string) => {
     setActiveSection(section);
-    let offset = 0;
     
     switch (section) {
       case 'Gallery':
-        offset = 0;
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         break;
       case 'Details':
-        // 跳转到Gallery Details部分
-        offset = width + 450; // 图片高度 + 基本信息 + 画师信息
+        scrollViewRef.current?.scrollTo({ y: sectionOffsets.details, animated: true });
         break;
       case 'Reviews':
-        // 跳转到Gallery Reviews部分
-        offset = width + 1200;
+        scrollViewRef.current?.scrollTo({ y: sectionOffsets.reviews, animated: true });
         break;
       case 'Recommended':
-        // 跳转到推荐部分
-        offset = width + 1600;
+        scrollViewRef.current?.scrollTo({ y: sectionOffsets.recommended, animated: true });
         break;
     }
-    
-    scrollViewRef.current?.scrollTo({ y: offset, animated: true });
+  };
+
+  const handleSectionLayout = (section: string, event: any) => {
+    const { y } = event.nativeEvent.layout;
+    setSectionOffsets(prev => ({
+      ...prev,
+      [section]: y - 100 // 减去100px给header留空间
+    }));
   };
 
   const renderImageWithPadding = (imageUri: string, index: number) => {
@@ -214,6 +229,18 @@ No.2 Modification Related:
         />
       </View>
     );
+  };
+
+  // 处理点击画师信息跳转到画师详情页
+  const handleArtistPress = () => {
+    router.push({
+      pathname: '/artist-detail',
+      params: {
+        artistId: galleryItem.artist.id,
+        artistName: galleryItem.artist.name,
+        artistAvatar: galleryItem.artist.avatar
+      }
+    });
   };
 
   return (
@@ -244,6 +271,7 @@ No.2 Modification Related:
             <TouchableOpacity
               key={tab}
               onPress={() => scrollToSection(tab)}
+              style={styles.headerTabButton}
             >
               <Text style={[
                 styles.headerTab,
@@ -326,9 +354,9 @@ No.2 Modification Related:
           <Text style={styles.deadline}>⏱ Deadline: {galleryItem.deadline}</Text>
         </View>
 
-        {/* Artist Info Box */}
+        {/* Artist Info Box - 添加点击跳转功能 */}
         <View style={styles.artistBox}>
-          <TouchableOpacity style={styles.artistCard}>
+          <TouchableOpacity style={styles.artistCard} onPress={handleArtistPress}>
             <View style={styles.artistInfo}>
               <Image source={{ uri: galleryItem.artist.avatar }} style={styles.artistAvatar} />
               <View style={styles.artistDetails}>
@@ -358,47 +386,32 @@ No.2 Modification Related:
         </View>
 
         {/* Gallery Details Box - 按照要求分成三个部分 */}
-        <View ref={detailsRef} style={styles.detailsBox}>
+        <View 
+          ref={detailsRef} 
+          style={styles.detailsBox}
+          onLayout={(event) => handleSectionLayout('details', event)}
+        >
           <Text style={styles.sectionTitle}>Gallery Details</Text>
           
           {/* 第一部分：Content */}
-          <View style={styles.detailSection}>
+          <View style={[styles.detailSection, styles.contentSection]}>
             <Text style={styles.detailSectionTitle}>🎨 Content</Text>
             <Text style={styles.detailSectionContent}>{galleryItem.details.content}</Text>
           </View>
 
           {/* 第二部分：Preferred Types */}
-          <View style={styles.detailSection}>
+          <View style={[styles.detailSection, styles.preferredSection]}>
             <Text style={styles.detailSectionTitle}>❤️ Preferred Types</Text>
             <Text style={styles.detailSectionContent}>{galleryItem.details.preferredTypes}</Text>
           </View>
 
           {/* 第三部分：Not Accepted Types */}
-          <View style={styles.detailSection}>
+          <View style={[styles.detailSection, styles.notAcceptedSection]}>
             <Text style={styles.detailSectionTitle}>🚫 Not Accepted Types</Text>
             <Text style={styles.detailSectionContent}>{galleryItem.details.notAcceptedTypes}</Text>
           </View>
 
-          {/* 图片展示区域 - 大图展示 */}
-          <View style={styles.galleryImagesSection}>
-            <Text style={styles.galleryImagesTitle}>Gallery Preview</Text>
-            <View style={styles.largeImageContainer}>
-              <Image 
-                source={{ uri: galleryItem.details.galleryImages[0] }} 
-                style={styles.largeGalleryImage} 
-                resizeMode="contain"
-              />
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryImagesScroll}>
-              {galleryItem.details.galleryImages.map((image, index) => (
-                <TouchableOpacity key={index} style={styles.galleryImageItem}>
-                  <Image source={{ uri: image }} style={styles.galleryImagePreview} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.detailCard}>
+          <View style={[styles.detailCard, styles.acceptsTextSection]}>
             <Text style={styles.detailIcon}>📝</Text>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Accepts Text Design</Text>
@@ -407,6 +420,20 @@ No.2 Modification Related:
           </View>
 
           <Text style={styles.detailDescription}>{galleryItem.details.description}</Text>
+
+          {/* 图片展示区域 - 竖向平铺 */}
+          <View style={styles.galleryImagesSection}>
+            <Text style={styles.galleryImagesTitle}>Gallery Preview</Text>
+            {galleryItem.details.galleryImages.map((image, index) => (
+              <View key={index} style={styles.verticalImageContainer}>
+                <Image 
+                  source={{ uri: image }} 
+                  style={styles.verticalGalleryImage} 
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Specifications Box - 添加更多参数 */}
@@ -461,7 +488,11 @@ No.2 Modification Related:
         </View>
 
         {/* Reviews Box */}
-        <View ref={reviewsRef} style={styles.reviewsBox}>
+        <View 
+          ref={reviewsRef} 
+          style={styles.reviewsBox}
+          onLayout={(event) => handleSectionLayout('reviews', event)}
+        >
           <View style={styles.reviewsHeader}>
             <Text style={styles.sectionTitle}>Gallery Reviews</Text>
             <TouchableOpacity>
@@ -490,7 +521,11 @@ No.2 Modification Related:
         </View>
 
         {/* Recommended Box */}
-        <View ref={recommendedRef} style={styles.recommendedBox}>
+        <View 
+          ref={recommendedRef} 
+          style={styles.recommendedBox}
+          onLayout={(event) => handleSectionLayout('recommended', event)}
+        >
           <Text style={styles.recommendedTitle}>💖 You might also like these galleries from this artist</Text>
           <View style={styles.recommendedGrid}>
             {recommendedItems.map((item) => (
@@ -606,13 +641,16 @@ const styles = StyleSheet.create({
   headerTabs: {
     flexDirection: 'row',
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginHorizontal: 20,
+    paddingRight: 10, // 给右侧三个点留空间
+  },
+  headerTabButton: {
+    paddingVertical: 4,
   },
   headerTab: {
-    fontSize: 16,
+    fontSize: 14, // 稍微缩小字体
     color: '#888',
-    marginHorizontal: 16,
   },
   activeHeaderTab: {
     color: '#00A8FF',
@@ -796,12 +834,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 16,
   },
-  // 新增的三个区块样式
+  // 新增的三个区块样式 - 不同颜色
   detailSection: {
-    backgroundColor: '#2A1A1A',
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
+  },
+  contentSection: {
+    backgroundColor: '#1A2A3A', // 蓝色背景
+  },
+  preferredSection: {
+    backgroundColor: '#2A3A2A', // 绿色背景
+  },
+  notAcceptedSection: {
+    backgroundColor: '#3A2A1A', // 橙色背景
+  },
+  acceptsTextSection: {
+    backgroundColor: '#1A2A3A', // 蓝色背景
   },
   detailSectionTitle: {
     fontSize: 16,
@@ -814,7 +863,7 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     lineHeight: 20,
   },
-  // 图片展示区域样式 - 修改为大图展示
+  // 图片展示区域样式 - 竖向平铺
   galleryImagesSection: {
     marginBottom: 16,
   },
@@ -824,35 +873,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 12,
   },
-  largeImageContainer: {
+  verticalImageContainer: {
     width: '100%',
-    height: 250,
+    height: 200,
     marginBottom: 12,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#333',
   },
-  largeGalleryImage: {
+  verticalGalleryImage: {
     width: '100%',
     height: '100%',
-  },
-  galleryImagesScroll: {
-    flexDirection: 'row',
-  },
-  galleryImageItem: {
-    marginRight: 12,
-  },
-  galleryImagePreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#333',
   },
   detailCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 16,
-    backgroundColor: '#2A1A1A',
     padding: 12,
     borderRadius: 8,
   },
@@ -888,7 +924,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   specTable: {
-    backgroundColor: '#2A1A1A',
+    backgroundColor: '#333333', // 改为灰色背景
     borderRadius: 8,
     overflow: 'hidden',
   },

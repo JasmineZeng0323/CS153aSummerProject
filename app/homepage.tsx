@@ -2,15 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
+} from 'react-native-reanimated';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const Homepage = () => {
   const [activeTab, setActiveTab] = useState('Gallery');
@@ -19,6 +30,10 @@ const Homepage = () => {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState(['All']);
   const [userInfo, setUserInfo] = useState(null);
+
+  // Animation values for page swiping
+  const translateX = useSharedValue(0);
+  const currentPage = useSharedValue(0); // 0 = Gallery, 1 = Projects
 
   useEffect(() => {
     loadUserInfo();
@@ -34,6 +49,47 @@ const Homepage = () => {
       console.error('Error loading user info:', error);
     }
   };
+
+  // Handle tab switch
+  const handleTabSwitch = (tab: string) => {
+    setActiveTab(tab);
+    const targetPage = tab === 'Gallery' ? 0 : 1;
+    currentPage.value = targetPage;
+    translateX.value = withTiming(-targetPage * screenWidth, {
+      duration: 300,
+    });
+  };
+
+  // Pan gesture handler for swiping between pages
+  const gestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
+    onStart: (_, context) => {
+      context.startX = translateX.value;
+    },
+    onActive: (event, context) => {
+      translateX.value = context.startX + event.translationX;
+    },
+    onEnd: (event) => {
+      const shouldGoToNext = event.translationX < -screenWidth / 3 && currentPage.value === 0;
+      const shouldGoToPrev = event.translationX > screenWidth / 3 && currentPage.value === 1;
+      
+      if (shouldGoToNext) {
+        currentPage.value = 1;
+        translateX.value = withTiming(-screenWidth, { duration: 250 });
+        runOnJS(setActiveTab)('Projects');
+      } else if (shouldGoToPrev) {
+        currentPage.value = 0;
+        translateX.value = withTiming(0, { duration: 250 });
+        runOnJS(setActiveTab)('Gallery');
+      } else {
+        // Snap back to current page
+        translateX.value = withTiming(-currentPage.value * screenWidth, { duration: 200 });
+      }
+    },
+  });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   // Mock data for gallery items
   const galleryItems = [
@@ -105,6 +161,62 @@ const Homepage = () => {
     }
   ];
 
+  // Mock data for projects (same as the projects page)
+  const projectItems = [
+    {
+      id: 1,
+      title: 'Long-term OC Project!',
+      description: 'Free OC contract work, any style accepted! Please specify clearly...',
+      budget: '¥200-500',
+      deadline: '2025-12-31',
+      clientName: 'Anonymous Client',
+      clientAvatar: 'https://i.pravatar.cc/60?img=1',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
+      tags: ['Real Name Verified', 'High Quality']
+    },
+    {
+      id: 2,
+      title: 'This is a long-term dream project',
+      description: 'Any business type is welcome! Illustration business must have samples...',
+      budget: '¥52-52k',
+      deadline: '2025-12-31',
+      clientName: 'Dream Seeker',
+      clientAvatar: 'https://i.pravatar.cc/60?img=2',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop',
+      tags: ['Real Name Verified', 'High Quality']
+    },
+    {
+      id: 3,
+      title: 'Anything goes!',
+      description: 'Any business type accepted 🍺＞∪＜🍺 Please specify art style clearly...',
+      budget: '¥50-200',
+      deadline: '2025-08-31',
+      clientName: 'Art Lover',
+      clientAvatar: 'https://i.pravatar.cc/60?img=3',
+      isVerified: false,
+      isHighQuality: false,
+      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop',
+      tags: []
+    },
+    {
+      id: 4,
+      title: '💜 Birthday invitation from a fox 💜',
+      description: '💜 Want to prepare a birthday gift in advance 💜 Thank you for every...',
+      budget: '¥52-10k',
+      deadline: '2026-04-30',
+      clientName: 'Fox Birthday',
+      clientAvatar: 'https://i.pravatar.cc/60?img=4',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
+      tags: ['Real Name Verified', 'High Quality']
+    }
+  ];
+
   const categories = ['Recommended', 'New', 'Pre-order', 'Following'];
   
   const allCategories = [
@@ -142,13 +254,11 @@ const Homepage = () => {
     }
   };
 
-  // 正确的 renderGalleryItem 函数，包含导航功能
   const renderGalleryItem = (item) => (
     <TouchableOpacity 
       key={item.id} 
       style={styles.galleryItem}
       onPress={() => {
-        // 跳转到橱窗详情页面，传递橱窗ID和更多参数
         router.push({
           pathname: '/gallery-detail',
           params: { 
@@ -183,6 +293,142 @@ const Homepage = () => {
         <Text style={styles.soldCount}>Sold {item.sold}</Text>
       </View>
     </TouchableOpacity>
+  );
+
+  const renderProjectItem = (item: any) => (
+    <TouchableOpacity key={item.id} style={styles.projectCard}>
+      <View style={styles.projectHeader}>
+        <View style={styles.projectInfo}>
+          <Text style={styles.projectTitle}>{item.title}</Text>
+          <Text style={styles.projectDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+          
+          {/* Tags */}
+          {item.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              {item.tags.map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          
+          <View style={styles.projectDetails}>
+            <Text style={styles.budget}>{item.budget}</Text>
+            <Text style={styles.deadline}>{item.deadline} Deadline</Text>
+          </View>
+        </View>
+        
+        <View style={styles.projectImageContainer}>
+          <Image source={{ uri: item.image }} style={styles.projectImage} />
+          <View style={styles.projectActions}>
+            <TouchableOpacity style={styles.actionButton}>
+              <Text style={styles.actionIcon}>📋</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Gallery Page Content
+  const GalleryContent = () => (
+    <View style={styles.pageContent}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchPlaceholder}>🔍 Search</Text>
+        </View>
+      </View>
+
+      {/* Category Tabs */}
+      <View style={styles.categoryContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryTab, activeCategory === category && styles.activeCategoryTab]}
+              onPress={() => setActiveCategory(category)}
+            >
+              <Text style={[styles.categoryText, activeCategory === category && styles.activeCategoryText]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Filter Options */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, is24HourExpress && styles.activeFilter]}
+          onPress={() => setIs24HourExpress(!is24HourExpress)}
+        >
+          <Text style={styles.filterIcon}>⚡</Text>
+          <Text style={[styles.filterText, is24HourExpress && styles.activeFilterText]}>
+            24H Express
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setShowCategoryFilter(true)}
+        >
+          <Text style={styles.filterText}>Categories ▼</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterText}>Price/Time ▼</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Gallery Grid */}
+      <View style={styles.galleryGrid}>
+        {galleryItems.map((item) => renderGalleryItem(item))}
+      </View>
+    </View>
+  );
+
+  // Projects Page Content
+  const ProjectsContent = () => (
+    <View style={styles.pageContent}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchPlaceholder}>Search</Text>
+        </View>
+      </View>
+
+      {/* Filter Buttons */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterIcon}>🏢</Text>
+          <Text style={styles.filterButtonText}>Verified Only</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterIcon}>✅</Text>
+          <Text style={styles.filterButtonText}>Unclaimed Only</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterIcon}>👤</Text>
+          <Text style={styles.filterButtonText}>Character</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterIcon}>🔽</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Projects List */}
+      <View style={styles.projectsList}>
+        {projectItems.map((item) => renderProjectItem(item))}
+      </View>
+    </View>
   );
 
   const CategoryFilterModal = () => (
@@ -295,7 +541,7 @@ const Homepage = () => {
         <View style={styles.headerLeft}>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'Gallery' && styles.activeTab]}
-            onPress={() => setActiveTab('Gallery')}
+            onPress={() => handleTabSwitch('Gallery')}
           >
             <Text style={[styles.tabText, activeTab === 'Gallery' && styles.activeTabText]}>
               Gallery
@@ -303,7 +549,7 @@ const Homepage = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === 'Projects' && styles.activeTab]}
-            onPress={() => setActiveTab('Projects')}
+            onPress={() => handleTabSwitch('Projects')}
           >
             <Text style={[styles.tabText, activeTab === 'Projects' && styles.activeTabText]}>
               Projects
@@ -320,60 +566,22 @@ const Homepage = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Text style={styles.searchPlaceholder}>🔍 Search</Text>
-          </View>
-        </View>
-
-        {/* Category Tabs */}
-        <View style={styles.categoryContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[styles.categoryTab, activeCategory === category && styles.activeCategoryTab]}
-                onPress={() => setActiveCategory(category)}
-              >
-                <Text style={[styles.categoryText, activeCategory === category && styles.activeCategoryText]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+      {/* Swipeable Content */}
+      <PanGestureHandler onGestureEvent={gestureHandler}>
+        <Animated.View style={[styles.swipeContainer, animatedStyle]}>
+          {/* Gallery Page */}
+          <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+            <GalleryContent />
+            <View style={styles.bottomPadding} />
           </ScrollView>
-        </View>
 
-        {/* Filter Options */}
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[styles.filterButton, is24HourExpress && styles.activeFilter]}
-            onPress={() => setIs24HourExpress(!is24HourExpress)}
-          >
-            <Text style={styles.filterIcon}>⚡</Text>
-            <Text style={[styles.filterText, is24HourExpress && styles.activeFilterText]}>
-              24H Express
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.filterButton}
-            onPress={() => setShowCategoryFilter(true)}
-          >
-            <Text style={styles.filterText}>Categories ▼</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterText}>Price/Time ▼</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Gallery Grid */}
-        <View style={styles.galleryGrid}>
-          {galleryItems.map((item) => renderGalleryItem(item))}
-        </View>
-      </ScrollView>
+          {/* Projects Page */}
+          <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+            <ProjectsContent />
+            <View style={styles.bottomPadding} />
+          </ScrollView>
+        </Animated.View>
+      </PanGestureHandler>
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
@@ -381,7 +589,10 @@ const Homepage = () => {
           <Text style={styles.navIcon}>🏠</Text>
           <Text style={[styles.navText, styles.activeNavText]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/artists')}
+        >
           <Text style={styles.navIcon}>🎨</Text>
           <Text style={styles.navText}>Artists</Text>
         </TouchableOpacity>
@@ -474,7 +685,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
-  content: {
+  // Swipe container styles
+  swipeContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    width: screenWidth * 2,
+  },
+  page: {
+    width: screenWidth,
+    flex: 1,
+  },
+  pageContent: {
     flex: 1,
   },
   searchContainer: {
@@ -486,6 +707,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingHorizontal: 20,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchPlaceholder: {
     color: '#666',
@@ -538,6 +761,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
   },
+  filterButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
   activeFilterText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
@@ -546,7 +773,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
-    paddingBottom: 80,
   },
   galleryItem: {
     width: '48%',
@@ -624,6 +850,93 @@ const styles = StyleSheet.create({
   soldCount: {
     color: '#888',
     fontSize: 12,
+  },
+  // Projects styles
+  projectsList: {
+    paddingHorizontal: 24,
+  },
+  projectCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  projectHeader: {
+    flexDirection: 'row',
+  },
+  projectInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  projectTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  projectDescription: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  tag: {
+    backgroundColor: '#00A8FF',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  tagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  projectDetails: {
+    flexDirection: 'column',
+  },
+  budget: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+    marginBottom: 4,
+  },
+  deadline: {
+    fontSize: 14,
+    color: '#888',
+  },
+  projectImageContainer: {
+    position: 'relative',
+  },
+  projectImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+  },
+  projectActions: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionIcon: {
+    fontSize: 16,
+  },
+  bottomPadding: {
+    height: 100,
   },
   bottomNav: {
     flexDirection: 'row',
