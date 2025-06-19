@@ -1,22 +1,23 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {
-    runOnJS,
-    useAnimatedGestureHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  runOnJS,
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -27,6 +28,20 @@ const ArtistsPage = () => {
   // Animation values for page swiping
   const translateX = useSharedValue(0);
   const currentPage = useSharedValue(0); // 0 = Artists, 1 = Portfolio, 2 = Rankings
+
+  // Portfolio page states
+  const [activeCategoryTab, setActiveCategoryTab] = useState('Recommended');
+  const [activeFilters, setActiveFilters] = useState({
+    type: 'All',
+    style: 'All', 
+    technique: 'All',
+    attribute: 'All'
+  });
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [currentFilterType, setCurrentFilterType] = useState('');
+
+  // Like states for artworks - 使用 Map 来存储每个作品的点赞状态
+  const [artworkLikes, setArtworkLikes] = useState(new Map());
 
   // Handle tab switch
   const handleTabSwitch = (tab: string) => {
@@ -116,6 +131,151 @@ const ArtistsPage = () => {
     }
   ];
 
+  // Mock artwork data with random aspect ratios for waterfall layout
+  const artworkItems = [
+    {
+      id: 1,
+      title: 'Fantasy Character Design',
+      artist: 'Artist Name',
+      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=600&fit=crop',
+      likes: 234,
+      isLiked: false,
+      aspectRatio: 1.5, // Height/width
+      category: 'Character',
+      style: 'Japanese',
+      technique: 'Digital'
+    },
+    {
+      id: 2,
+      title: 'Anime Portrait',
+      artist: 'Artist Name 2',
+      image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=500&fit=crop',
+      likes: 156,
+      isLiked: true,
+      aspectRatio: 1.25,
+      category: 'Portrait',
+      style: 'Japanese',
+      technique: 'Digital'
+    },
+    {
+      id: 3,
+      title: 'Character Illustration',
+      artist: 'Artist Name 3',
+      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=400&h=700&fit=crop',
+      likes: 342,
+      isLiked: false,
+      aspectRatio: 1.75,
+      category: 'Illustration',
+      style: 'Western',
+      technique: 'Traditional'
+    },
+    {
+      id: 4,
+      title: 'Concept Art',
+      artist: 'Artist Name 4',
+      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=450&fit=crop',
+      likes: 89,
+      isLiked: false,
+      aspectRatio: 1.125,
+      category: 'Concept',
+      style: 'Japanese',
+      technique: 'Digital'
+    },
+    {
+      id: 5,
+      title: 'Character Sheet',
+      artist: 'Artist Name 5',
+      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=400&h=600&fit=crop',
+      likes: 278,
+      isLiked: true,
+      aspectRatio: 1.5,
+      category: 'Character',
+      style: 'Western',
+      technique: 'Digital'
+    },
+    {
+      id: 6,
+      title: 'Scene Design',
+      artist: 'Artist Name 6',
+      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=520&fit=crop',
+      likes: 445,
+      isLiked: false,
+      aspectRatio: 1.3,
+      category: 'Scene',
+      style: 'Ancient',
+      technique: 'Watercolor'
+    },
+    {
+      id: 7,
+      title: 'Landscape Art',
+      artist: 'Artist Name 7',
+      image: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop',
+      likes: 198,
+      isLiked: false,
+      aspectRatio: 0.75, // Landscape ratio
+      category: 'Landscape',
+      style: 'Western',
+      technique: 'Digital'
+    },
+    {
+      id: 8,
+      title: 'Abstract Design',
+      artist: 'Artist Name 8',
+      image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=800&fit=crop',
+      likes: 321,
+      isLiked: true,
+      aspectRatio: 2.0, // Very tall
+      category: 'Abstract',
+      style: 'Modern',
+      technique: 'Digital'
+    }
+  ];
+
+  // Filter options
+  const filterOptions = {
+    type: ['All', 'Drawing', 'Q-Version', 'Character', 'Scene', 'Portrait', 'Live2D'],
+    style: ['All', 'Japanese', 'Ancient', 'Western'],
+    technique: ['All', 'Traditional', 'Digital', 'CG', 'Realistic', 'Watercolor'],
+    attribute: ['All', 'Female', 'Male']
+  };
+
+  const cardWidth = (screenWidth - 60) / 2; // Width for two columns
+
+  // Handle like toggle for artworks
+  const handleArtworkLike = (artworkId: number, currentLiked: boolean, currentLikes: number) => {
+    setArtworkLikes(prev => {
+      const newMap = new Map(prev);
+      const key = `${artworkId}`;
+      const currentState = newMap.get(key) || { isLiked: currentLiked, likes: currentLikes };
+      
+      newMap.set(key, {
+        isLiked: !currentState.isLiked,
+        likes: currentState.isLiked ? currentState.likes - 1 : currentState.likes + 1
+      });
+      
+      return newMap;
+    });
+  };
+
+  // Get current like state for artwork
+  const getArtworkLikeState = (artworkId: number, defaultLiked: boolean, defaultLikes: number) => {
+    const state = artworkLikes.get(`${artworkId}`);
+    return state || { isLiked: defaultLiked, likes: defaultLikes };
+  };
+
+  const handleFilterSelect = (filterType: string, value: string) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setShowFilterModal(false);
+  };
+
+  const openFilterModal = (filterType: string) => {
+    setCurrentFilterType(filterType);
+    setShowFilterModal(true);
+  };
+
   const renderArtist = (artist: any) => (
     <TouchableOpacity 
       key={artist.id} 
@@ -164,10 +324,135 @@ const ArtistsPage = () => {
     </TouchableOpacity>
   );
 
+  // Waterfall layout calculation
+  const renderWaterfallArtwork = () => {
+    const leftColumn = [];
+    const rightColumn = [];
+    let leftHeight = 0;
+    let rightHeight = 0;
+
+    artworkItems.forEach((item) => {
+      const likeState = getArtworkLikeState(item.id, item.isLiked, item.likes);
+      const cardHeight = cardWidth * item.aspectRatio;
+      
+      // Add to the shorter column
+      if (leftHeight <= rightHeight) {
+        leftColumn.push({ ...item, likeState });
+        leftHeight += cardHeight + 8; // 8px margin
+      } else {
+        rightColumn.push({ ...item, likeState });
+        rightHeight += cardHeight + 8;
+      }
+    });
+
+    return (
+      <View style={styles.waterfallContainer}>
+        <View style={styles.column}>
+          {leftColumn.map((item, index) => renderWaterfallCard(item, index))}
+        </View>
+        <View style={styles.column}>
+          {rightColumn.map((item, index) => renderWaterfallCard(item, index))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderWaterfallCard = (item: any, index: number) => {
+    return (
+      <TouchableOpacity 
+        key={`artwork-${item.id}-${index}`} 
+        style={styles.waterfallCard}
+        onPress={() => {
+          router.push({
+            pathname: '/artwork-detail',
+            params: {
+              artworkId: item.id,
+              title: item.title,
+              artist: item.artist,
+              image: item.image,
+              likes: item.likeState.likes,
+              isLiked: item.likeState.isLiked
+            }
+          });
+        }}
+      >
+        <View style={styles.waterfallImageContainer}>
+          <Image 
+            source={{ uri: item.image }} 
+            style={[
+              styles.waterfallImage,
+              { height: cardWidth * item.aspectRatio }
+            ]}
+            resizeMode="cover"
+          />
+          
+          {/* Like Button - No count, just heart */}
+          <TouchableOpacity 
+            style={styles.simpleLikeButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleArtworkLike(item.id, item.likeState.isLiked, item.likeState.likes);
+            }}
+          >
+            <Text style={[styles.simpleLikeIcon, item.likeState.isLiked && styles.likedIcon]}>
+              {item.likeState.isLiked ? '❤️' : '🤍'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderFilterModal = () => (
+    <Modal
+      visible={showFilterModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowFilterModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {currentFilterType === 'type' && 'Type'}
+              {currentFilterType === 'style' && 'Style'}
+              {currentFilterType === 'technique' && 'Technique'}
+              {currentFilterType === 'attribute' && 'Attribute'}
+            </Text>
+            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.filterOptionsContainer}>
+            <View style={styles.filterGrid}>
+              {filterOptions[currentFilterType]?.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.filterOption,
+                    activeFilters[currentFilterType] === option && styles.selectedFilterOption
+                  ]}
+                  onPress={() => handleFilterSelect(currentFilterType, option)}
+                >
+                  <Text style={[
+                    styles.filterOptionText,
+                    activeFilters[currentFilterType] === option && styles.selectedFilterOptionText
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
   // Artists Page Content
   const ArtistsContent = () => (
     <View style={styles.pageContent}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -175,7 +460,6 @@ const ArtistsPage = () => {
         </View>
       </View>
 
-      {/* Invitation Calendar Card */}
       <TouchableOpacity style={styles.invitationCard}>
         <View style={styles.invitationIcon}>
           <Text style={styles.calendarIcon}>📅</Text>
@@ -187,7 +471,6 @@ const ArtistsPage = () => {
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
 
-      {/* Category Tabs */}
       <View style={styles.categoryContainer}>
         <TouchableOpacity style={[styles.categoryTab, styles.activeCategoryTab]}>
           <Text style={styles.categoryIcon}>💖</Text>
@@ -198,7 +481,6 @@ const ArtistsPage = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <TouchableOpacity style={styles.filterButton}>
           <Text style={styles.filterText}>Available</Text>
@@ -214,20 +496,94 @@ const ArtistsPage = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Artists List */}
       <View style={styles.artistsList}>
         {artistsData.map((artist) => renderArtist(artist))}
       </View>
     </View>
   );
 
-  // Portfolio Page Content (placeholder)
+  // Portfolio Page Content
   const PortfolioContent = () => (
     <View style={styles.pageContent}>
-      <View style={styles.placeholderContainer}>
-        <Text style={styles.placeholderText}>Portfolio Page</Text>
-        <Text style={styles.placeholderSubtext}>Coming Soon...</Text>
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={styles.searchPlaceholder}>Search</Text>
+        </View>
       </View>
+
+      <View style={styles.categoryContainer}>
+        <TouchableOpacity
+          style={[styles.categoryTab, activeCategoryTab === 'Following' && styles.activeCategoryTab]}
+          onPress={() => setActiveCategoryTab('Following')}
+        >
+          <Text style={[styles.categoryText, activeCategoryTab === 'Following' && styles.activeCategoryText]}>
+            Following
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.categoryTab, activeCategoryTab === 'Recommended' && styles.activeCategoryTab]}
+          onPress={() => setActiveCategoryTab('Recommended')}
+        >
+          <Text style={styles.categoryIcon}>💖</Text>
+          <Text style={[styles.categoryText, activeCategoryTab === 'Recommended' && styles.activeCategoryText]}>
+            Recommended
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.categoryTab, activeCategoryTab === 'Latest' && styles.activeCategoryTab]}
+          onPress={() => setActiveCategoryTab('Latest')}
+        >
+          <Text style={[styles.categoryText, activeCategoryTab === 'Latest' && styles.activeCategoryText]}>
+            Latest
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilters.type !== 'All' && styles.activeFilterButton]}
+          onPress={() => openFilterModal('type')}
+        >
+          <Text style={[styles.filterText, activeFilters.type !== 'All' && styles.activeFilterText]}>
+            Type {activeFilters.type !== 'All' && `▲`}
+            {activeFilters.type === 'All' && '▼'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilters.style !== 'All' && styles.activeFilterButton]}
+          onPress={() => openFilterModal('style')}
+        >
+          <Text style={[styles.filterText, activeFilters.style !== 'All' && styles.activeFilterText]}>
+            Style {activeFilters.style !== 'All' && `▲`}
+            {activeFilters.style === 'All' && '▼'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilters.technique !== 'All' && styles.activeFilterButton]}
+          onPress={() => openFilterModal('technique')}
+        >
+          <Text style={[styles.filterText, activeFilters.technique !== 'All' && styles.activeFilterText]}>
+            Technique {activeFilters.technique !== 'All' && `▲`}
+            {activeFilters.technique === 'All' && '▼'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilters.attribute !== 'All' && styles.activeFilterButton]}
+          onPress={() => openFilterModal('attribute')}
+        >
+          <Text style={[styles.filterText, activeFilters.attribute !== 'All' && styles.activeFilterText]}>
+            Attribute {activeFilters.attribute !== 'All' && `▲`}
+            {activeFilters.attribute === 'All' && '▼'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Waterfall Layout Artworks Grid */}
+      {renderWaterfallArtwork()}
     </View>
   );
 
@@ -331,6 +687,8 @@ const ArtistsPage = () => {
           </View>
         </TouchableOpacity>
       </View>
+
+      {renderFilterModal()}
     </SafeAreaView>
   );
 };
@@ -459,15 +817,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 24,
     marginBottom: 20,
+    justifyContent: 'flex-start',
   },
   categoryTab: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginRight: 16,
+    marginRight: 24,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    minWidth: 80,
   },
   activeCategoryTab: {
     borderBottomColor: '#00A8FF',
@@ -499,9 +859,16 @@ const styles = StyleSheet.create({
     marginRight: 12,
     marginBottom: 8,
   },
+  activeFilterButton: {
+    backgroundColor: '#00A8FF',
+  },
   filterText: {
     color: '#FFFFFF',
     fontSize: 14,
+  },
+  activeFilterText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   // Artists List
   artistsList: {
@@ -565,7 +932,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
   },
-  // Artwork Grid
+  // Artwork Grid for Artists page
   artworkGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -579,6 +946,103 @@ const styles = StyleSheet.create({
   artworkImage: {
     width: '100%',
     height: '100%',
+  },
+  // Waterfall layout styles
+  waterfallContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+  },
+  column: {
+    width: (screenWidth - 60) / 2,
+  },
+  waterfallCard: {
+    borderRadius: 16,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  waterfallImageContainer: {
+    position: 'relative',
+  },
+  waterfallImage: {
+    width: '100%',
+  },
+  // Simplified Like Button - No count
+  simpleLikeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  simpleLikeIcon: {
+    fontSize: 20,
+  },
+  likedIcon: {
+    transform: [{ scale: 1.1 }],
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#0A0A0A',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A1A',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  closeButton: {
+    fontSize: 20,
+    color: '#888',
+  },
+  filterOptionsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  filterOption: {
+    backgroundColor: '#1A1A1A',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  selectedFilterOption: {
+    backgroundColor: '#00A8FF',
+    borderColor: '#00A8FF',
+  },
+  filterOptionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  selectedFilterOptionText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   // Placeholder content
   placeholderContainer: {

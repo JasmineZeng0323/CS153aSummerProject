@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="projects" />
         <Stack.Screen name="gallery-detail" />
         <Stack.Screen name="payment" />
+        <Stack.Screen name="artwork-detail" />
       </Stack>
     </GestureHandlerRootView>
   );

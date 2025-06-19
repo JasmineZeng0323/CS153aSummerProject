@@ -1,22 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {
-    runOnJS,
-    useAnimatedGestureHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  runOnJS,
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -44,7 +44,7 @@ const ArtistDetailPage = () => {
     badge: 'Premium Artist',
     bio: '•°°• I love you •°°•\n***I love you***',
     hasInvitationCalendar: true,
-    invitationDate: '2025年06月18日 21点',
+    invitationDate: 'June 18, 2025 21:00',
     hasPriceList: true,
     portfolioCount: 100,
     galleryCount: 4,
@@ -189,7 +189,23 @@ const ArtistDetailPage = () => {
     <View style={styles.tabContent}>
       <View style={styles.portfolioGrid}>
         {portfolioItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.portfolioItem}>
+          <TouchableOpacity 
+            key={index} 
+            style={styles.portfolioItem}
+            onPress={() => {
+              router.push({
+                pathname: '/artwork-detail',
+                params: {
+                  artworkId: index + 1,
+                  title: `Portfolio Item ${index + 1}`,
+                  artist: artistData.name,
+                  image: item,
+                  likes: Math.floor(Math.random() * 500) + 50,
+                  isLiked: Math.random() > 0.5
+                }
+              });
+            }}
+          >
             <Image source={{ uri: item }} style={styles.portfolioImage} />
           </TouchableOpacity>
         ))}
@@ -214,7 +230,8 @@ const ArtistDetailPage = () => {
                     title: item.title,
                     price: item.price,
                     artistName: artistData.name,
-                    artistAvatar: artistData.avatar
+                    artistAvatar: artistData.avatar,
+                    image: item.image
                   }
                 });
               }}
@@ -272,7 +289,7 @@ const ArtistDetailPage = () => {
           </TouchableOpacity>
           <View style={styles.headerRightButtons}>
             <View style={styles.usernameTag}>
-              <Text style={styles.usernameText}>Username</Text>
+              <Text style={styles.usernameText}>{artistData.username}</Text>
             </View>
             <TouchableOpacity style={styles.headerButton}>
               <Text style={styles.headerButtonText}>⋯</Text>
@@ -321,9 +338,9 @@ const ArtistDetailPage = () => {
           <View style={styles.priceListSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>💰</Text>
-              <Text style={styles.sectionTitle}>Ta's Price List</Text>
+              <Text style={styles.sectionTitle}>Artist's Price List</Text>
               <TouchableOpacity>
-                <Text style={styles.sectionAction}>3 commission types ›</Text>
+                <Text style={styles.sectionAction}>4 commission types ›</Text>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.priceListScroll}>
@@ -424,7 +441,13 @@ const ArtistDetailPage = () => {
           </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.inviteButton}>
+        <TouchableOpacity 
+          style={styles.inviteButton}
+          onPress={() => {
+            // Navigate to chat or invite modal
+            console.log('Invite artist for commission');
+          }}
+        >
           <Text style={styles.inviteIcon}>👥</Text>
           <Text style={styles.inviteButtonText}>Invite</Text>
         </TouchableOpacity>
