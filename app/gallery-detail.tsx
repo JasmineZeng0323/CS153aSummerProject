@@ -1,6 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   FlatList,
@@ -25,13 +27,55 @@ const GalleryDetailPage = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeSection, setActiveSection] = useState('Gallery');
   const [showNavigation, setShowNavigation] = useState(false);
-  const [stock, setStock] = useState(2); // 可变库存用于测试
+  const [stock, setStock] = useState(2); // 动态库存管理
+  const [isStockLoaded, setIsStockLoaded] = useState(false);
   
   const flatListRef = useRef<FlatList>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // Mock data for the gallery item (可以根据传递的参数动态修改)
+  // Load stock from storage on component mount
+  useEffect(() => {
+    loadGalleryStock();
+  }, [galleryId]);
+
+  // Reload stock when page is focused (returning from payment)
+  useFocusEffect(
+    useCallback(() => {
+      loadGalleryStock();
+    }, [galleryId])
+  );
+
+  const loadGalleryStock = async () => {
+    try {
+      const stockData = await AsyncStorage.getItem('galleryStocks');
+      if (stockData) {
+        const stocks = JSON.parse(stockData);
+        const currentStock = stocks[galleryId as string];
+        if (currentStock !== undefined) {
+          setStock(currentStock);
+        }
+      }
+      setIsStockLoaded(true);
+    } catch (error) {
+      console.error('Error loading stock:', error);
+      setIsStockLoaded(true);
+    }
+  };
+
+  const updateGalleryStock = async (newStock: number) => {
+    try {
+      const stockData = await AsyncStorage.getItem('galleryStocks');
+      const stocks = stockData ? JSON.parse(stockData) : {};
+      stocks[galleryId as string] = newStock;
+      await AsyncStorage.setItem('galleryStocks', JSON.stringify(stocks));
+      setStock(newStock);
+    } catch (error) {
+      console.error('Error updating stock:', error);
+    }
+  };
+
+  // Mock artist data
   const galleryItem = {
     id: galleryId || 1,
     title: title || 'Anime Style Portrait with Glasses',
@@ -39,7 +83,7 @@ const GalleryDetailPage = () => {
     sold: 13,
     category: 'Half Body',
     deadline: '2 days after artist accepts order',
-    stock: `1/${stock}`,
+    stock: `${Math.max(0, stock)}/${stock + 13}`, // Current stock / total originally available
     images: [
       'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=600&h=400&fit=crop',
@@ -47,7 +91,7 @@ const GalleryDetailPage = () => {
       'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=600&fit=crop'
     ],
     artist: {
-      id: 'artist_001', // 添加画师ID
+      id: 'artist_001',
       name: artistName || 'Little Cookie Fox',
       rating: 5.0,
       reviewCount: 208,
@@ -83,7 +127,6 @@ No.2 Modification Related:
         { stage: 'Draft', percentage: 70 },
         { stage: 'Final', percentage: 100 }
       ],
-      // 添加图片展示数据
       galleryImages: [
         'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
         'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop',
@@ -138,7 +181,6 @@ No.2 Modification Related:
     }
   ];
 
-  // 添加各部分的ref引用 - 使用useRef<View>类型
   const galleryRef = useRef<View>(null);
   const detailsRef = useRef<View>(null);
   const reviewsRef = useRef<View>(null);
@@ -159,33 +201,58 @@ No.2 Modification Related:
   };
 
   const handlePurchase = () => {
-    if (stock <= 0) {
-      alert('This gallery is sold out. Please wait for the artist to restock.');
+    if (!isStockLoaded) {
+      Alert.alert('Loading', 'Please wait while we load the latest information.');
       return;
     }
 
-    // 跳转到支付页面，传递必要的参数
-    router.push({
-      pathname: '/payment',
-      params: {
-        galleryId: galleryItem.id,
-        title: galleryItem.title,
-        price: galleryItem.price,
-        artistName: galleryItem.artist.name,
-        artistAvatar: galleryItem.artist.avatar,
-        galleryImage: galleryItem.images[0],
-        deadline: galleryItem.deadline,
-        stock: galleryItem.stock
-      }
-    });
-  };
+    if (stock <= 0) {
+      Alert.alert(
+        'Out of Stock 😔',
+        'This gallery is currently sold out. The artist may restock in the future. Would you like to add it to your wishlist to get notified?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Add to Wishlist', 
+            onPress: () => {
+              setIsWishlisted(true);
+              Alert.alert('Added!', 'We\'ll notify you when this item is back in stock.');
+            }
+          }
+        ]
+      );
+      return;
+    }
 
-  const handlePaymentSuccess = () => {
-    // 购买成功后减少库存
-    setStock(prev => Math.max(0, prev - 1));
+    // Show purchase confirmation
+    Alert.alert(
+      'Confirm Purchase',
+      `You're about to purchase "${galleryItem.title}" for $${galleryItem.price}.\n\nRemaining stock: ${stock}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Continue',
+          onPress: () => {
+            // Navigate to payment page
+            router.push({
+              pathname: '/payment',
+              params: {
+                galleryId: galleryItem.id,
+                title: galleryItem.title,
+                price: galleryItem.price,
+                artistName: galleryItem.artist.name,
+                artistAvatar: galleryItem.artist.avatar,
+                galleryImage: galleryItem.images[0],
+                deadline: galleryItem.deadline,
+                stock: galleryItem.stock
+              }
+            });
+          }
+        }
+      ]
+    );
   };
-
-  const [sectionOffsets, setSectionOffsets] = useState({
+const [sectionOffsets, setSectionOffsets] = useState({
     gallery: 0,
     details: 0,
     reviews: 0,
@@ -231,7 +298,6 @@ No.2 Modification Related:
     );
   };
 
-  // 处理点击画师信息跳转到画师详情页
   const handleArtistPress = () => {
     router.push({
       pathname: '/artist-detail',
@@ -241,6 +307,21 @@ No.2 Modification Related:
         artistAvatar: galleryItem.artist.avatar
       }
     });
+  };
+
+  // Stock display with better messaging
+  const getStockDisplay = () => {
+    if (!isStockLoaded) return 'Loading...';
+    if (stock <= 0) return 'Sold Out';
+    if (stock <= 2) return `Only ${stock} left!`;
+    return `Stock ${galleryItem.stock}`;
+  };
+
+  const getStockColor = () => {
+    if (!isStockLoaded) return '#888';
+    if (stock <= 0) return '#FF5722';
+    if (stock <= 2) return '#FF9800';
+    return '#888';
   };
 
   return (
@@ -337,12 +418,25 @@ No.2 Modification Related:
               />
             ))}
           </View>
+          
+          {/* Stock Alert Overlay */}
+          {stock <= 2 && stock > 0 && (
+            <View style={styles.stockAlert}>
+              <Text style={styles.stockAlertText}>⚡ Limited Stock!</Text>
+            </View>
+          )}
+          
+          {stock <= 0 && (
+            <View style={styles.soldOutOverlay}>
+              <Text style={styles.soldOutText}>SOLD OUT</Text>
+            </View>
+          )}
         </View>
 
         {/* Basic Info */}
         <View style={styles.basicInfoBox}>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>¥{galleryItem.price}</Text>
+            <Text style={styles.price}>${galleryItem.price}</Text>
             <Text style={styles.soldCount}>Sold {galleryItem.sold}</Text>
           </View>
           <View style={styles.titleRow}>
@@ -352,9 +446,17 @@ No.2 Modification Related:
             </View>
           </View>
           <Text style={styles.deadline}>⏱ Deadline: {galleryItem.deadline}</Text>
+          
+          {/* Enhanced Stock Display */}
+          <View style={styles.stockRow}>
+            <Text style={styles.stockLabel}>Availability:</Text>
+            <Text style={[styles.stockText, { color: getStockColor() }]}>
+              {getStockDisplay()}
+            </Text>
+          </View>
         </View>
 
-        {/* Artist Info Box - 添加点击跳转功能 */}
+        {/* Artist Info Box */}
         <View style={styles.artistBox}>
           <TouchableOpacity style={styles.artistCard} onPress={handleArtistPress}>
             <View style={styles.artistInfo}>
@@ -385,7 +487,7 @@ No.2 Modification Related:
           </TouchableOpacity>
         </View>
 
-        {/* Gallery Details Box - 按照要求分成三个部分 */}
+        {/* Gallery Details Box */}
         <View 
           ref={detailsRef} 
           style={styles.detailsBox}
@@ -393,19 +495,16 @@ No.2 Modification Related:
         >
           <Text style={styles.sectionTitle}>Gallery Details</Text>
           
-          {/* 第一部分：Content */}
           <View style={[styles.detailSection, styles.contentSection]}>
             <Text style={styles.detailSectionTitle}>🎨 Content</Text>
             <Text style={styles.detailSectionContent}>{galleryItem.details.content}</Text>
           </View>
 
-          {/* 第二部分：Preferred Types */}
           <View style={[styles.detailSection, styles.preferredSection]}>
             <Text style={styles.detailSectionTitle}>❤️ Preferred Types</Text>
             <Text style={styles.detailSectionContent}>{galleryItem.details.preferredTypes}</Text>
           </View>
 
-          {/* 第三部分：Not Accepted Types */}
           <View style={[styles.detailSection, styles.notAcceptedSection]}>
             <Text style={styles.detailSectionTitle}>🚫 Not Accepted Types</Text>
             <Text style={styles.detailSectionContent}>{galleryItem.details.notAcceptedTypes}</Text>
@@ -421,7 +520,6 @@ No.2 Modification Related:
 
           <Text style={styles.detailDescription}>{galleryItem.details.description}</Text>
 
-          {/* 图片展示区域 - 竖向平铺 */}
           <View style={styles.galleryImagesSection}>
             <Text style={styles.galleryImagesTitle}>Gallery Preview</Text>
             {galleryItem.details.galleryImages.map((image, index) => (
@@ -436,7 +534,7 @@ No.2 Modification Related:
           </View>
         </View>
 
-        {/* Specifications Box - 添加更多参数 */}
+        {/* Specifications Box */}
         <View style={styles.specificationsBox}>
           <Text style={styles.sectionTitle}>Artwork Specifications</Text>
           <View style={styles.specTable}>
@@ -548,7 +646,7 @@ No.2 Modification Related:
         <View style={styles.bottomPadding} />
       </Animated.ScrollView>
 
-      {/* Fixed Bottom Bar - 修改样式参考图片 */}
+      {/* Fixed Bottom Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity 
           style={styles.bottomAction}
@@ -575,17 +673,26 @@ No.2 Modification Related:
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.purchaseButton, stock <= 0 && styles.soldOutButton]}
+          style={[
+            styles.purchaseButton, 
+            stock <= 0 && styles.soldOutButton,
+            !isStockLoaded && styles.loadingButton
+          ]}
           onPress={handlePurchase}
+          disabled={!isStockLoaded}
         >
           <View style={styles.purchaseButtonContent}>
-            {stock > 0 ? (
+            {!isStockLoaded ? (
+              <>
+                <Text style={styles.loadingText}>Loading...</Text>
+              </>
+            ) : stock > 0 ? (
               <>
                 <View style={styles.purchaseButtonLeft}>
                   <Text style={styles.deadlineText}>
                     {galleryItem.deadline.split(' ').slice(0, 3).join(' ')}
                   </Text>
-                  <Text style={styles.stockText}>Stock {galleryItem.stock}</Text>
+                  <Text style={styles.stockText}>{getStockDisplay()}</Text>
                 </View>
                 <View style={styles.purchaseButtonDivider} />
                 <Text style={styles.purchaseButtonText}>Buy Now</Text>
@@ -593,8 +700,8 @@ No.2 Modification Related:
             ) : (
               <>
                 <View style={styles.purchaseButtonLeft}>
-                  <Text style={styles.deadlineText}>Sep 29 Restocked</Text>
-                  <Text style={styles.stockText}>Stock 0</Text>
+                  <Text style={styles.deadlineText}>Notify when restocked</Text>
+                  <Text style={styles.stockText}>Out of Stock</Text>
                 </View>
                 <View style={styles.purchaseButtonDivider} />
                 <Text style={styles.purchaseButtonText}>🔔 Notify Me</Text>
@@ -643,13 +750,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     marginHorizontal: 20,
-    paddingRight: 10, // 给右侧三个点留空间
+    paddingRight: 10,
   },
   headerTabButton: {
     paddingVertical: 4,
   },
   headerTab: {
-    fontSize: 14, // 稍微缩小字体
+    fontSize: 14,
     color: '#888',
   },
   activeHeaderTab: {
@@ -705,6 +812,39 @@ const styles = StyleSheet.create({
   activeIndicator: {
     backgroundColor: '#00A8FF',
   },
+  
+  // Stock alerts
+  stockAlert: {
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  stockAlertText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  soldOutOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  soldOutText: {
+    color: '#FF5722',
+    fontSize: 32,
+    fontWeight: 'bold',
+    transform: [{ rotate: '-15deg' }],
+  },
+
   basicInfoBox: {
     backgroundColor: '#0A0A0A',
     padding: 20,
@@ -752,7 +892,21 @@ const styles = StyleSheet.create({
   deadline: {
     fontSize: 14,
     color: '#888',
+    marginBottom: 8,
   },
+  
+  // Enhanced stock display
+  stockRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stockLabel: {
+    fontSize: 14,
+    color: '#888',
+  },
+
+
   artistBox: {
     backgroundColor: '#1A1A1A',
     marginHorizontal: 20,
@@ -834,23 +988,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 16,
   },
-  // 新增的三个区块样式 - 不同颜色
   detailSection: {
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
   },
   contentSection: {
-    backgroundColor: '#1A2A3A', // 蓝色背景
+    backgroundColor: '#1A2A3A',
   },
   preferredSection: {
-    backgroundColor: '#2A3A2A', // 绿色背景
+    backgroundColor: '#2A3A2A',
   },
   notAcceptedSection: {
-    backgroundColor: '#3A2A1A', // 橙色背景
+    backgroundColor: '#3A2A1A',
   },
   acceptsTextSection: {
-    backgroundColor: '#1A2A3A', // 蓝色背景
+    backgroundColor: '#1A2A3A',
   },
   detailSectionTitle: {
     fontSize: 16,
@@ -863,7 +1016,6 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     lineHeight: 20,
   },
-  // 图片展示区域样式 - 竖向平铺
   galleryImagesSection: {
     marginBottom: 16,
   },
@@ -924,7 +1076,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   specTable: {
-    backgroundColor: '#333333', // 改为灰色背景
+    backgroundColor: '#333333',
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -1111,29 +1263,30 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: 100,
   },
-  // 修改后的底部栏样式 - 不透明且更紧凑
+
+  // Enhanced Bottom Bar
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1A1A1A', // 不透明背景
+    backgroundColor: '#1A1A1A',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12, // 减少垂直内边距
-    paddingBottom: 16, // 减少底部内边距
+    paddingVertical: 12,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: '#333',
   },
   bottomAction: {
     alignItems: 'center',
-    marginRight: 16, // 减少右边距
-    padding: 4, // 减少内边距
+    marginRight: 16,
+    padding: 4,
   },
   bottomActionIcon: {
-    fontSize: 18, // 减少图标大小
-    marginBottom: 2, // 减少底边距
+    fontSize: 18,
+    marginBottom: 2,
     color: '#888',
   },
   activeAction: {
@@ -1143,7 +1296,7 @@ const styles = StyleSheet.create({
     color: '#FF6B9D',
   },
   bottomActionText: {
-    fontSize: 10, // 减少文字大小
+    fontSize: 10,
     color: '#888',
   },
   activeActionText: {
@@ -1153,13 +1306,16 @@ const styles = StyleSheet.create({
   purchaseButton: {
     flex: 1,
     backgroundColor: '#00A8FF',
-    paddingVertical: 10, // 减少垂直内边距
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 16, // 减少圆角
+    borderRadius: 16,
     alignItems: 'center',
   },
   soldOutButton: {
     backgroundColor: '#666',
+  },
+  loadingButton: {
+    backgroundColor: '#444',
   },
   purchaseButtonContent: {
     flexDirection: 'row',
@@ -1172,24 +1328,29 @@ const styles = StyleSheet.create({
   },
   deadlineText: {
     color: '#FFFFFF',
-    fontSize: 10, // 减少文字大小
+    fontSize: 10,
     opacity: 0.9,
     marginBottom: 2,
   },
   stockText: {
     color: '#FFFFFF',
-    fontSize: 12, // 减少文字大小
+    fontSize: 12,
     fontWeight: 'bold',
   },
   purchaseButtonDivider: {
     width: 1,
-    height: 20, // 减少高度
+    height: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     marginHorizontal: 12,
   },
   purchaseButtonText: {
     color: '#FFFFFF',
-    fontSize: 13, // 减少文字大小
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: 'bold',
   },
 });

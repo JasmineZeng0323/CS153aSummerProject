@@ -167,7 +167,7 @@ const Homepage = () => {
       id: 1,
       title: 'Long-term OC Project!',
       description: 'Free OC contract work, any style accepted! Please specify clearly...',
-      budget: '¥200-500',
+      budget: '$200-500',
       deadline: '2025-12-31',
       clientName: 'Anonymous Client',
       clientAvatar: 'https://i.pravatar.cc/60?img=1',
@@ -180,7 +180,7 @@ const Homepage = () => {
       id: 2,
       title: 'This is a long-term dream project',
       description: 'Any business type is welcome! Illustration business must have samples...',
-      budget: '¥52-52k',
+      budget: '$52-52k',
       deadline: '2025-12-31',
       clientName: 'Dream Seeker',
       clientAvatar: 'https://i.pravatar.cc/60?img=2',
@@ -193,7 +193,7 @@ const Homepage = () => {
       id: 3,
       title: 'Anything goes!',
       description: 'Any business type accepted 🍺＞∪＜🍺 Please specify art style clearly...',
-      budget: '¥50-200',
+      budget: '$50-200',
       deadline: '2025-08-31',
       clientName: 'Art Lover',
       clientAvatar: 'https://i.pravatar.cc/60?img=3',
@@ -206,7 +206,7 @@ const Homepage = () => {
       id: 4,
       title: '💜 Birthday invitation from a fox 💜',
       description: '💜 Want to prepare a birthday gift in advance 💜 Thank you for every...',
-      budget: '¥52-10k',
+      budget: '$52-10k',
       deadline: '2026-04-30',
       clientName: 'Fox Birthday',
       clientAvatar: 'https://i.pravatar.cc/60?img=4',
@@ -289,7 +289,7 @@ const Homepage = () => {
       </View>
       <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
       <View style={styles.priceInfo}>
-        <Text style={styles.price}>¥{item.price}</Text>
+        <Text style={styles.price}>${item.price}</Text>
         <Text style={styles.soldCount}>Sold {item.sold}</Text>
       </View>
     </TouchableOpacity>
@@ -560,7 +560,10 @@ const Homepage = () => {
           <TouchableOpacity style={styles.searchButton}>
             <Text style={styles.searchIcon}>🔍</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => router.push('/post-project')}
+          >
             <Text style={styles.addIcon}>+</Text>
           </TouchableOpacity>
         </View>
@@ -585,9 +588,12 @@ const Homepage = () => {
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/homepage')}
+        >
           <Text style={styles.navIcon}>🏠</Text>
-          <Text style={[styles.navText, styles.activeNavText]}>Home</Text>
+          <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
@@ -596,18 +602,20 @@ const Homepage = () => {
           <Text style={styles.navIcon}>🎨</Text>
           <Text style={styles.navText}>Artists</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>👥</Text>
-          <Text style={styles.navText}>Groups</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/messages')}
+        >
           <Text style={styles.navIcon}>💬</Text>
           <Text style={styles.navText}>Messages</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>1</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => router.push('/profile')}
+        >
           <Text style={styles.navIcon}>👤</Text>
           <Text style={styles.navText}>Profile</Text>
           <View style={styles.badge}>
@@ -941,17 +949,16 @@ const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: '#1A1A1A',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    paddingVertical: 12, 
+    paddingHorizontal: 16, 
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
+    paddingHorizontal: 8, 
     position: 'relative',
   },
   navIcon: {

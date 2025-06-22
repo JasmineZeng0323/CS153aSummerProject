@@ -109,28 +109,28 @@ const ArtistDetailPage = () => {
     {
       id: 1,
       title: 'Basic Portrait',
-      price: '¥52',
+      price: '$52',
       description: 'Simple character portrait with basic coloring',
       image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=150&fit=crop'
     },
     {
       id: 2,
       title: 'Detailed Portrait',
-      price: '¥152',
+      price: '$152',
       description: 'Detailed character with complex background',
       image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=150&fit=crop'
     },
     {
       id: 3,
       title: 'Full Body Art',
-      price: '¥352',
+      price: '$352',
       description: 'Complete character design with background',
       image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=150&fit=crop'
     },
     {
       id: 4,
       title: 'Premium Package',
-      price: '¥1000',
+      price: '$1000',
       description: 'Multiple variations with commercial rights',
       image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=150&fit=crop'
     }
@@ -239,7 +239,7 @@ const ArtistDetailPage = () => {
               <Image source={{ uri: item.image }} style={styles.galleryImage} />
               <View style={styles.galleryInfo}>
                 <Text style={styles.galleryTitle}>{item.title}</Text>
-                <Text style={styles.galleryPrice}>¥{item.price}</Text>
+                <Text style={styles.galleryPrice}>${item.price}</Text>
               </View>
             </TouchableOpacity>
           ))}

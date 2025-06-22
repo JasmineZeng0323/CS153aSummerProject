@@ -14,6 +14,16 @@ export default function RootLayout() {
         <Stack.Screen name="gallery-detail" />
         <Stack.Screen name="payment" />
         <Stack.Screen name="artwork-detail" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="messages" />
+        <Stack.Screen name="chat" />
+        <Stack.Screen name="post-project" />
+        <Stack.Screen name="my-projects" />     
+        <Stack.Screen name="project-detail" />   
+        <Stack.Screen name="purchased-gallery" />
+        <Stack.Screen name="order-detail" />
+        <Stack.Screen name="write-review" />
       </Stack>
     </GestureHandlerRootView>
   );

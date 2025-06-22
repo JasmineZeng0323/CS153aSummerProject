@@ -1,6 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -31,25 +33,122 @@ const PaymentPage = () => {
     return param || '';
   };
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('wallet');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleConfirmPayment = () => {
+  // Calculate fees and totals (US market focused)
+  const basePrice = parseFloat(getStringParam(price)) || 0;
+  const processingFee = basePrice * 0.029 + 0.30; // Stripe-like fee structure
+  const platformFee = basePrice * 0.05; // 5% platform fee
+  const salesTax = basePrice * 0.0875; // Average US sales tax ~8.75%
+  const totalAmount = basePrice + processingFee + platformFee + salesTax;
+
+  const saveGalleryPurchase = async (orderData: any) => {
+    try {
+      const existingPurchases = await AsyncStorage.getItem('purchasedGalleries');
+      const purchases = existingPurchases ? JSON.parse(existingPurchases) : [];
+      
+      const newPurchase = {
+        ...orderData,
+        id: Date.now(),
+        purchaseDate: new Date().toISOString().split('T')[0],
+        status: 'in_progress',
+        orderNumber: `ORD-${Date.now()}`,
+        hasReviewed: false,
+        progress: 0
+      };
+      
+      purchases.unshift(newPurchase); // Add to beginning of array
+      await AsyncStorage.setItem('purchasedGalleries', JSON.stringify(purchases));
+      
+      console.log('Gallery purchase saved:', newPurchase);
+      return newPurchase;
+    } catch (error) {
+      console.error('Error saving gallery purchase:', error);
+      throw error;
+    }
+  };
+
+  const updateGalleryStock = async () => {
+    try {
+      // This would typically update stock in your backend
+      // For now, we'll simulate stock reduction
+      console.log('Stock reduced for gallery:', getStringParam(galleryId));
+    } catch (error) {
+      console.error('Error updating stock:', error);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
     if (!agreeToTerms) {
-      alert('Please agree to the terms and conditions');
+      Alert.alert('Terms Required', 'Please agree to the terms and conditions to proceed.');
       return;
     }
     
-    // Handle payment logic here
-    console.log('Processing payment...', {
-      galleryId: getStringParam(galleryId),
-      paymentMethod: selectedPaymentMethod,
-      amount: getStringParam(price)
-    });
+    setIsProcessing(true);
     
-    // Simulate payment success
-    alert('Payment successful! Your order has been placed.');
-    router.back();
+    try {
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Prepare order data
+      const orderData = {
+        galleryId: getStringParam(galleryId),
+        title: getStringParam(title),
+        price: basePrice,
+        totalPaid: totalAmount.toFixed(2),
+        artistName: getStringParam(artistName),
+        artistAvatar: getStringParam(artistAvatar),
+        image: getStringParam(galleryImage),
+        deadline: getStringParam(deadline),
+        category: 'Gallery Purchase',
+        paymentMethod: selectedPaymentMethod,
+        fees: {
+          processing: processingFee.toFixed(2),
+          platform: platformFee.toFixed(2),
+          tax: salesTax.toFixed(2)
+        }
+      };
+      
+      // Save purchase to storage
+      const savedPurchase = await saveGalleryPurchase(orderData);
+      
+      // Update stock
+      await updateGalleryStock();
+      
+      // Show success alert
+      Alert.alert(
+        'Payment Successful! 🎉',
+        `Your order #${savedPurchase.orderNumber} has been placed successfully.\n\nThe artist will begin working on your commission and you'll receive updates on progress.`,
+        [
+          {
+            text: 'View My Orders',
+            onPress: () => {
+              router.dismiss();
+              router.push('/purchased-gallery');
+            }
+          },
+          {
+            text: 'Continue Shopping',
+            style: 'cancel',
+            onPress: () => {
+              router.dismiss();
+              router.push('/homepage');
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      Alert.alert(
+        'Payment Failed',
+        'We encountered an issue processing your payment. Please try again or contact support.'
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -59,60 +158,142 @@ const PaymentPage = () => {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Confirm Order</Text>
+        <Text style={styles.title}>Secure Checkout</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Security Badge */}
+        <View style={styles.securityBadge}>
+          <Text style={styles.securityIcon}>🔒</Text>
+          <Text style={styles.securityText}>256-bit SSL Encrypted • PCI DSS Compliant</Text>
+        </View>
+
         {/* Artist Info */}
         <View style={styles.artistInfo}>
           <Image source={{ uri: getStringParam(artistAvatar) || 'https://i.pravatar.cc/60?img=1' }} style={styles.artistAvatar} />
-          <Text style={styles.artistName}>{getStringParam(artistName)}</Text>
-          <Text style={styles.reviewCount}>229 reviews</Text>
+          <View style={styles.artistDetails}>
+            <Text style={styles.artistName}>{getStringParam(artistName)}</Text>
+            <Text style={styles.reviewCount}>⭐ 4.9 • 229 reviews • Pro Artist</Text>
+          </View>
+          <View style={styles.verifiedBadge}>
+            <Text style={styles.verifiedText}>✓ Verified</Text>
+          </View>
         </View>
 
-        {/* Order Item */}
-        <View style={styles.orderItem}>
-          <Image source={{ uri: getStringParam(galleryImage) || 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop' }} style={styles.orderItemImage} />
-          <View style={styles.orderItemInfo}>
-            <Text style={styles.orderItemTitle}>{getStringParam(title) || 'Original Custom Live2D (No Drawing)'}</Text>
-            <Text style={styles.orderItemPrice}>¥{getStringParam(price)}</Text>
-            <Text style={styles.orderItemDeadline}>Deadline: {getStringParam(deadline) || '3 days after artist accepts'}</Text>
-            <Text style={styles.orderItemStock}>Remaining stock: {getStringParam(stock) || '2/3'}</Text>
+        {/* Order Summary */}
+        <View style={styles.orderSummary}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <View style={styles.orderItem}>
+            <Image source={{ uri: getStringParam(galleryImage) }} style={styles.orderItemImage} />
+            <View style={styles.orderItemInfo}>
+              <Text style={styles.orderItemTitle}>{getStringParam(title)}</Text>
+              <Text style={styles.orderItemDetails}>
+                Delivery: {getStringParam(deadline)}{'\n'}
+                Stock: {getStringParam(stock) || '2/3 remaining'}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* Payment Methods */}
         <View style={styles.paymentMethods}>
-          <Text style={styles.paymentMethodsTitle}>Payment Method</Text>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
           
           <TouchableOpacity 
-            style={styles.paymentMethodItem}
-            onPress={() => setSelectedPaymentMethod('alipay')}
+            style={[styles.paymentMethodItem, selectedPaymentMethod === 'card' && styles.selectedPayment]}
+            onPress={() => setSelectedPaymentMethod('card')}
           >
             <View style={styles.paymentMethodLeft}>
               <Text style={styles.paymentMethodIcon}>💳</Text>
-              <Text style={styles.paymentMethodText}>Alipay</Text>
+              <Text style={styles.paymentMethodText}>Credit/Debit Card</Text>
+              <View style={styles.cardLogos}>
+                <Text style={styles.cardLogo}>💳</Text>
+                <Text style={styles.cardLogo}>💳</Text>
+                <Text style={styles.cardLogo}>💳</Text>
+              </View>
             </View>
-            <View style={[styles.radio, selectedPaymentMethod === 'alipay' && styles.radioSelected]} />
+            <View style={[styles.radio, selectedPaymentMethod === 'card' && styles.radioSelected]} />
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.paymentMethodItem}
+            style={[styles.paymentMethodItem, selectedPaymentMethod === 'paypal' && styles.selectedPayment]}
+            onPress={() => setSelectedPaymentMethod('paypal')}
+          >
+            <View style={styles.paymentMethodLeft}>
+              <Text style={styles.paymentMethodIcon}>🏦</Text>
+              <Text style={styles.paymentMethodText}>PayPal</Text>
+              <Text style={styles.paymentMethodSubtext}>Pay with your PayPal account</Text>
+            </View>
+            <View style={[styles.radio, selectedPaymentMethod === 'paypal' && styles.radioSelected]} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.paymentMethodItem, selectedPaymentMethod === 'apple' && styles.selectedPayment]}
+            onPress={() => setSelectedPaymentMethod('apple')}
+          >
+            <View style={styles.paymentMethodLeft}>
+              <Text style={styles.paymentMethodIcon}>📱</Text>
+              <Text style={styles.paymentMethodText}>Apple Pay</Text>
+              <Text style={styles.paymentMethodSubtext}>Touch ID or Face ID</Text>
+            </View>
+            <View style={[styles.radio, selectedPaymentMethod === 'apple' && styles.radioSelected]} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.paymentMethodItem, selectedPaymentMethod === 'wallet' && styles.selectedPayment]}
             onPress={() => setSelectedPaymentMethod('wallet')}
           >
             <View style={styles.paymentMethodLeft}>
               <Text style={styles.paymentMethodIcon}>💰</Text>
-              <Text style={styles.paymentMethodText}>Top-up Account</Text>
-              <Text style={styles.walletBalance}>¥1426</Text>
+              <Text style={styles.paymentMethodText}>Platform Wallet</Text>
+              <Text style={styles.walletBalance}>Balance: $1,426.00</Text>
             </View>
             <View style={[styles.radio, selectedPaymentMethod === 'wallet' && styles.radioSelected]} />
           </TouchableOpacity>
         </View>
 
-        {/* Security Notice */}
-        <View style={styles.securityNotice}>
-          <Text style={styles.securityText}>✅ Your funds are protected by the platform until you confirm receipt. Rest assured.</Text>
+        {/* Price Breakdown */}
+        <View style={styles.priceBreakdown}>
+          <Text style={styles.sectionTitle}>Price Details</Text>
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Artwork Price</Text>
+            <Text style={styles.priceValue}>${basePrice.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Platform Fee (5%)</Text>
+            <Text style={styles.priceValue}>${platformFee.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Processing Fee</Text>
+            <Text style={styles.priceValue}>${processingFee.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Sales Tax</Text>
+            <Text style={styles.priceValue}>${salesTax.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.divider} />
+          
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalValue}>${totalAmount.toFixed(2)}</Text>
+          </View>
+        </View>
+
+        {/* Money Back Guarantee */}
+        <View style={styles.guaranteeSection}>
+          <Text style={styles.guaranteeIcon}>🛡️</Text>
+          <View style={styles.guaranteeContent}>
+            <Text style={styles.guaranteeTitle}>Money Back Guarantee</Text>
+            <Text style={styles.guaranteeText}>
+              100% satisfaction guaranteed. If you're not happy with the final result, we'll work with the artist for revisions or provide a full refund.
+            </Text>
+          </View>
         </View>
 
         {/* Terms Agreement */}
@@ -123,26 +304,36 @@ const PaymentPage = () => {
           <View style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}>
             {agreeToTerms && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          <Text style={styles.termsText}>I have read and agree to the </Text>
-          <Text style={styles.termsLink}>Artist Platform Purchase Agreement</Text>
+          <Text style={styles.termsText}>
+            I agree to the <Text style={styles.termsLink}>Terms of Service</Text>, <Text style={styles.termsLink}>Privacy Policy</Text>, and <Text style={styles.termsLink}>Refund Policy</Text>
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Bottom */}
+      {/* Bottom Payment Button */}
       <View style={styles.paymentBottom}>
-        <View style={styles.totalAmount}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalPrice}>¥{getStringParam(price)}</Text>
-        </View>
         <TouchableOpacity 
-          style={[styles.confirmPaymentBtn, !agreeToTerms && styles.confirmPaymentBtnDisabled]}
+          style={[styles.confirmPaymentBtn, (!agreeToTerms || isProcessing) && styles.confirmPaymentBtnDisabled]}
           onPress={handleConfirmPayment}
-          disabled={!agreeToTerms}
+          disabled={!agreeToTerms || isProcessing}
         >
-          <Text style={styles.confirmPaymentText}>Confirm Payment</Text>
+          {isProcessing ? (
+            <View style={styles.processingContainer}>
+              <Text style={styles.processingText}>🔄 Processing Payment...</Text>
+            </View>
+          ) : (
+            <View style={styles.paymentButtonContent}>
+              <Text style={styles.confirmPaymentText}>Complete Purchase</Text>
+              <Text style={styles.paymentAmount}>${totalAmount.toFixed(2)}</Text>
+            </View>
+          )}
         </TouchableOpacity>
+        
+        <Text style={styles.disclaimerText}>
+          By completing this purchase, you authorize the charge and agree to our terms
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -178,6 +369,31 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
+
+  // Security Badge
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1A2A1A',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  securityIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  securityText: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+
+  // Artist Info
   artistInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -191,21 +407,48 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginRight: 12,
   },
+  artistDetails: {
+    flex: 1,
+  },
   artistName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    flex: 1,
+    marginBottom: 4,
   },
   reviewCount: {
     fontSize: 14,
     color: '#888',
   },
-  orderItem: {
-    flexDirection: 'row',
+  verifiedBadge: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  verifiedText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+
+  // Order Summary
+  orderSummary: {
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#1A1A1A',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
   },
   orderItemImage: {
     width: 80,
@@ -222,29 +465,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 8,
   },
-  orderItemPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  orderItemDeadline: {
+  orderItemDetails: {
     fontSize: 14,
     color: '#888',
-    marginBottom: 4,
+    lineHeight: 20,
   },
-  orderItemStock: {
-    fontSize: 14,
-    color: '#888',
-  },
+
+  // Payment Methods
   paymentMethods: {
     paddingVertical: 20,
-  },
-  paymentMethodsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A1A',
   },
   paymentMethodItem: {
     flexDirection: 'row',
@@ -255,24 +486,43 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedPayment: {
+    borderColor: '#00A8FF',
+    backgroundColor: '#1A2A3A',
   },
   paymentMethodLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     flex: 1,
   },
   paymentMethodIcon: {
     fontSize: 20,
-    marginRight: 12,
+    marginBottom: 4,
   },
   paymentMethodText: {
     fontSize: 16,
     color: '#FFFFFF',
-    marginRight: 8,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  paymentMethodSubtext: {
+    fontSize: 12,
+    color: '#888',
+  },
+  cardLogos: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  cardLogo: {
+    fontSize: 12,
+    marginRight: 4,
   },
   walletBalance: {
-    fontSize: 16,
-    color: '#00A8FF',
+    fontSize: 14,
+    color: '#4CAF50',
     fontWeight: 'bold',
   },
   radio: {
@@ -286,21 +536,82 @@ const styles = StyleSheet.create({
     backgroundColor: '#00A8FF',
     borderColor: '#00A8FF',
   },
-  securityNotice: {
-    backgroundColor: '#1A4A3A',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginVertical: 20,
+
+  // Price Breakdown
+  priceBreakdown: {
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A1A',
   },
-  securityText: {
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  priceLabel: {
     fontSize: 14,
-    color: '#4AE54A',
+    color: '#888',
+  },
+  priceValue: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#333',
+    marginVertical: 12,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF6B35',
+  },
+
+  // Guarantee Section
+  guaranteeSection: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A2A',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#00A8FF',
+  },
+  guaranteeIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  guaranteeContent: {
+    flex: 1,
+  },
+  guaranteeTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#00A8FF',
+    marginBottom: 4,
+  },
+  guaranteeText: {
+    fontSize: 14,
+    color: '#CCCCCC',
     lineHeight: 20,
   },
+
+  // Terms Agreement
   termsAgreement: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 20,
   },
   checkbox: {
@@ -310,6 +621,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#666',
     marginRight: 12,
+    marginTop: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -325,49 +637,66 @@ const styles = StyleSheet.create({
   termsText: {
     fontSize: 14,
     color: '#888',
+    lineHeight: 20,
+    flex: 1,
   },
   termsLink: {
-    fontSize: 14,
     color: '#00A8FF',
   },
+
   bottomPadding: {
     height: 20,
   },
+
+  // Bottom Payment Button
   paymentBottom: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 16,
+    backgroundColor: '#0A0A0A',
     borderTopWidth: 1,
     borderTopColor: '#1A1A1A',
-    backgroundColor: '#0A0A0A',
-  },
-  totalAmount: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  totalLabel: {
-    fontSize: 16,
-    color: '#888',
-  },
-  totalPrice: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B35',
   },
   confirmPaymentBtn: {
     backgroundColor: '#00A8FF',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: 8,
   },
   confirmPaymentBtnDisabled: {
     backgroundColor: '#333',
   },
+  paymentButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
+  },
   confirmPaymentText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  paymentAmount: {
     color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  processingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  processingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });
 
