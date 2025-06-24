@@ -252,9 +252,43 @@ const ProfilePage = () => {
 
   // Mode switching logic (keeping existing functionality)
   const handleSwitchMode = async () => {
-    if (!userInfo?.isArtist && !isArtistMode) {
-      setShowModeSwitch(false);
+  // 🔧 修复：检查用户是否为艺术家且已验证
+  const isVerifiedArtist = userInfo?.isArtist && userInfo?.artistVerificationStatus === 'verified';
+  
+  if (!isVerifiedArtist && !isArtistMode) {
+    setShowModeSwitch(false);
+    
+    // 检查用户是否已经是艺术家但未验证
+    if (userInfo?.isArtist && userInfo?.artistVerificationStatus !== 'verified') {
+      const status = userInfo?.artistVerificationStatus || 'not_submitted';
+      let message = '';
       
+      switch (status) {
+        case 'pending':
+          message = 'Your artist verification is still being reviewed. Please wait for approval before switching to artist mode.';
+          break;
+        case 'rejected':
+          message = 'Your artist verification was rejected. Please resubmit your verification documents.';
+          break;
+        case 'not_submitted':
+        default:
+          message = 'To become an artist on our platform, you need to complete the verification process.';
+          break;
+      }
+      
+      Alert.alert(
+        'Artist Verification Required',
+        message,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: status === 'rejected' ? 'Resubmit' : 'Start Verification', 
+            onPress: () => router.push('/artist-verification')
+          }
+        ]
+      );
+    } else {
+      // 用户完全不是艺术家
       Alert.alert(
         'Artist Verification Required',
         'To become an artist on our platform, you need to complete the verification process.',
@@ -266,59 +300,135 @@ const ProfilePage = () => {
           }
         ]
       );
-      return;
     }
+    return;
+  }
 
-    setIsSwitching(true);
+  setIsSwitching(true);
+  
+  Animated.timing(fadeAnim, {
+    toValue: 0.3,
+    duration: 300,
+    useNativeDriver: true,
+  }).start();
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
+    const newMode = !isArtistMode;
+    setIsArtistMode(newMode);
+    
+    await AsyncStorage.setItem('isArtistMode', newMode.toString());
+    
+    const updatedUserInfo = {
+      ...userInfo,
+      currentMode: newMode ? 'artist' : 'client',
+      lastModeSwitch: new Date().toISOString()
+    };
+    setUserInfo(updatedUserInfo);
+    await AsyncStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
+    
+    if (newMode && !artistStats) {
+      const artistStatsData = await loadArtistStats();
+      setArtistStats(artistStatsData);
+    }
+    
+    setShowModeSwitch(false);
+    
+    const modeTitle = newMode ? 'Welcome to Artist Mode! 🎨' : 'Switched to Client Mode 🛒';
+    const modeMessage = newMode 
+      ? 'You can now manage your commissions, view earnings, and update your portfolio.'
+      : 'You can now browse artists, commission artwork, and manage your orders.';
+    
+    Alert.alert(modeTitle, modeMessage, [{ text: 'Got it!' }]);
+    
+  } catch (error) {
+    console.error('Error switching mode:', error);
+    Alert.alert('Switch Failed', 'Unable to switch modes. Please try again.');
+  } finally {
+    setIsSwitching(false);
     Animated.timing(fadeAnim, {
-      toValue: 0.3,
+      toValue: 1,
       duration: 300,
       useNativeDriver: true,
     }).start();
+  }
+};
 
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const newMode = !isArtistMode;
-      setIsArtistMode(newMode);
-      
-      await AsyncStorage.setItem('isArtistMode', newMode.toString());
-      
-      const updatedUserInfo = {
-        ...userInfo,
-        currentMode: newMode ? 'artist' : 'client',
-        lastModeSwitch: new Date().toISOString()
-      };
-      setUserInfo(updatedUserInfo);
-      await AsyncStorage.setItem('userInfo', JSON.stringify(updatedUserInfo));
-      
-      if (newMode && !artistStats) {
-        const artistStatsData = await loadArtistStats();
-        setArtistStats(artistStatsData);
-      }
-      
+// 🔧 同时更新模式切换模态框中的艺术家模式选项
+// 在 renderModeSwitchModal 函数中找到 Artist Mode Option 部分并更新：
+
+{/* Artist Mode Option */}
+<TouchableOpacity 
+  style={[
+    styles.modeOption,
+    isArtistMode && styles.activeModeOption,
+    (!userInfo?.isArtist || userInfo?.artistVerificationStatus !== 'verified') && styles.disabledModeOption
+  ]}
+  onPress={() => {
+    const isVerifiedArtist = userInfo?.isArtist && userInfo?.artistVerificationStatus === 'verified';
+    
+    if (!isArtistMode && isVerifiedArtist) {
+      handleSwitchMode();
+    } else if (!isVerifiedArtist) {
       setShowModeSwitch(false);
       
-      const modeTitle = newMode ? 'Welcome to Artist Mode! 🎨' : 'Switched to Client Mode 🛒';
-      const modeMessage = newMode 
-        ? 'You can now manage your commissions, view earnings, and update your portfolio.'
-        : 'You can now browse artists, commission artwork, and manage your orders.';
-      
-      Alert.alert(modeTitle, modeMessage, [{ text: 'Got it!' }]);
-      
-    } catch (error) {
-      console.error('Error switching mode:', error);
-      Alert.alert('Switch Failed', 'Unable to switch modes. Please try again.');
-    } finally {
-      setIsSwitching(false);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      if (userInfo?.isArtist && userInfo?.artistVerificationStatus !== 'verified') {
+        const status = userInfo?.artistVerificationStatus || 'not_submitted';
+        let message = '';
+        
+        switch (status) {
+          case 'pending':
+            message = 'Your verification is being reviewed. Please wait for approval.';
+            break;
+          case 'rejected':
+            message = 'Your verification was rejected. Please resubmit your documents.';
+            break;
+          default:
+            message = 'Complete artist verification to access artist mode.';
+            break;
+        }
+        
+        Alert.alert('Verification Required', message, [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Verify Now', onPress: () => router.push('/artist-verification') }
+        ]);
+      } else {
+        Alert.alert(
+          'Artist Verification Required',
+          'Complete artist verification to access artist mode.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Verify Now', onPress: () => router.push('/artist-verification') }
+          ]
+        );
+      }
     }
-  };
+  }}
+>
+  <View style={styles.modeIcon}>
+    <Text style={styles.modeIconText}>🎨</Text>
+  </View>
+  <View style={styles.modeInfo}>
+    <Text style={styles.modeTitle}>Artist Mode</Text>
+    <Text style={styles.modeDescription}>
+      {(!userInfo?.isArtist || userInfo?.artistVerificationStatus !== 'verified') 
+        ? 'Requires artist verification to access'
+        : 'Manage commissions, upload artwork, and track earnings'
+      }
+    </Text>
+  </View>
+  {isArtistMode && (
+    <View style={styles.activeIndicator}>
+      <Text style={styles.activeIndicatorText}>✓</Text>
+    </View>
+  )}
+  {(!userInfo?.isArtist || userInfo?.artistVerificationStatus !== 'verified') && (
+    <View style={styles.lockIndicator}>
+      <Text style={styles.lockText}>🔒</Text>
+    </View>
+  )}
+</TouchableOpacity>
 
   // Navigation handlers
   const handleEditProfile = () => {
@@ -1211,6 +1321,22 @@ const styles = StyleSheet.create({
   closeButtonText: {
     ...Typography.body,
     fontWeight: 'bold',
+  },
+
+  lockIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: Layout.radius.lg,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: Layout.spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  lockText: {
+    fontSize: 16,
+    opacity: 0.6,
   },
 
   // Mode Options
