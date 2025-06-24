@@ -22,7 +22,7 @@ export default function RootLayout() {
         <Stack.Screen name="publish-gallery" />
         <Stack.Screen name="published-galleries" />
         <Stack.Screen name="applied-projects" />
-        <Stack.Screen name="edit-gallery" />  //not implement
+        <Stack.Screen name="edit-gallery" />  
         <Stack.Screen name="gallery-analytics" /> //not implement
 
         
@@ -37,7 +37,7 @@ export default function RootLayout() {
         {/* Artist Dashboard & Management */}
         <Stack.Screen name="artist-dashboard" /> //not implement
         <Stack.Screen name="manage-commissions" /> //not implement
-        <Stack.Screen name="earnings-dashboard" /> //not implement
+        <Stack.Screen name="earnings-dashboard" /> 
         <Stack.Screen name="project-workspace" /> //not implement
         
         {/* Order & Payment Screens */}

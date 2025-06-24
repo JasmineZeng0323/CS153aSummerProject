@@ -1,5 +1,3 @@
-
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -9,18 +7,33 @@ import {
   Dimensions,
   FlatList,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import LoadingState from './components/common/LoadingState';
+import { Colors } from './components/styles/Colors';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
+// Unified container style
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0,
+  },
+  header: {
+    paddingTop: 50, // Status bar height
+  },
+};
 
 const { width } = Dimensions.get('window');
 
 const GalleryDetailPage = () => {
-
+  // Receive parameters from homepage
   const params = useLocalSearchParams();
   const { galleryId, title, price, artistName } = params;
 
@@ -29,7 +42,7 @@ const GalleryDetailPage = () => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeSection, setActiveSection] = useState('Gallery');
   const [showNavigation, setShowNavigation] = useState(false);
-  const [stock, setStock] = useState(2); // 动态库存管理
+  const [stock, setStock] = useState(2);
   const [isStockLoaded, setIsStockLoaded] = useState(false);
   
   const flatListRef = useRef<FlatList>(null);
@@ -77,39 +90,7 @@ const GalleryDetailPage = () => {
     }
   };
 
-  // Share functionality
-  const handleShare = () => {
-    Alert.alert(
-      'Share Gallery',
-      'How would you like to share this gallery?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Copy Link', 
-          onPress: () => {
-            console.log('Gallery link copied');
-            Alert.alert('Success', 'Gallery link copied to clipboard');
-          }
-        },
-        { 
-          text: 'Share Images', 
-          onPress: () => {
-            console.log('Sharing gallery images');
-            Alert.alert('Share', 'Sharing gallery images...');
-          }
-        },
-        { 
-          text: 'Recommend Gallery', 
-          onPress: () => {
-            console.log('Recommending gallery');
-            Alert.alert('Share', 'Recommending gallery to friends...');
-          }
-        }
-      ]
-    );
-  };
-
-  // Mock artist data
+  // Mock gallery data
   const galleryItem = {
     id: galleryId || 1,
     title: title || 'Anime Style Portrait with Glasses',
@@ -117,7 +98,7 @@ const GalleryDetailPage = () => {
     sold: 13,
     category: 'Half Body',
     deadline: '2 days after artist accepts order',
-    stock: `${Math.max(0, stock)}/${stock + 13}`, // Current stock / total originally available
+    stock: `${Math.max(0, stock)}/${stock + 13}`,
     images: [
       'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop',
       'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=600&h=400&fit=crop',
@@ -140,6 +121,8 @@ const GalleryDetailPage = () => {
       notAcceptedTypes: 'Real Person, Ancient Style, Gradient Hair Color',
       acceptsTextDesign: false,
       description: `After placing the order, adding discounts or modifications will not require extra charges!
+      
+The picture quality has been reduced a bit so the price is discounted...
 
 Art style reference below: Adult males, young boys, adult females, young girls are all acceptable.
 White hair preferred...
@@ -161,7 +144,9 @@ No.2 Modification Related:
       ],
       galleryImages: [
         'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-        'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop'
+        'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop',
+        'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop',
+        'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop'
       ]
     },
     specs: {
@@ -188,6 +173,13 @@ No.2 Modification Related:
       rating: 5,
       comment: 'Absolutely stunning work',
       avatar: 'https://i.pravatar.cc/40?img=3'
+    },
+    {
+      id: 3,
+      userName: 'MuseumOwl',
+      rating: 5,
+      comment: 'Incredibly cute artistic style',
+      avatar: 'https://i.pravatar.cc/40?img=4'
     }
   ];
 
@@ -204,10 +196,12 @@ No.2 Modification Related:
     }
   ];
 
-  const galleryRef = useRef<View>(null);
-  const detailsRef = useRef<View>(null);
-  const reviewsRef = useRef<View>(null);
-  const recommendedRef = useRef<View>(null);
+  const [sectionOffsets, setSectionOffsets] = useState({
+    gallery: 0,
+    details: 0,
+    reviews: 0,
+    recommended: 0
+  });
 
   useEffect(() => {
     const listener = scrollY.addListener(({ value }) => {
@@ -247,7 +241,6 @@ No.2 Modification Related:
       return;
     }
 
-    // Show purchase confirmation
     Alert.alert(
       'Confirm Purchase',
       `You're about to purchase "${galleryItem.title}" for $${galleryItem.price}.\n\nRemaining stock: ${stock}`,
@@ -256,7 +249,6 @@ No.2 Modification Related:
         { 
           text: 'Continue',
           onPress: () => {
-            // Navigate to payment page
             router.push({
               pathname: '/payment',
               params: {
@@ -275,13 +267,6 @@ No.2 Modification Related:
       ]
     );
   };
-
-  const [sectionOffsets, setSectionOffsets] = useState({
-    gallery: 0,
-    details: 0,
-    reviews: 0,
-    recommended: 0
-  });
 
   const scrollToSection = (section: string) => {
     setActiveSection(section);
@@ -306,7 +291,7 @@ No.2 Modification Related:
     const { y } = event.nativeEvent.layout;
     setSectionOffsets(prev => ({
       ...prev,
-      [section]: y - 100 // 减去100px给header留空间
+      [section]: y - 100
     }));
   };
 
@@ -342,74 +327,122 @@ No.2 Modification Related:
   };
 
   const getStockColor = () => {
-    if (!isStockLoaded) return '#888';
-    if (stock <= 0) return '#FF5722';
-    if (stock <= 2) return '#FF9800';
-    return '#888';
+    if (!isStockLoaded) return Colors.textMuted;
+    if (stock <= 0) return Colors.error;
+    if (stock <= 2) return Colors.warning;
+    return Colors.textMuted;
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Fixed Header - Only show when scrolled */}
-      <Animated.View style={[
-        styles.fixedHeader,
-        {
-          opacity: scrollY.interpolate({
+  // Custom floating header tabs component
+  const FloatingHeaderTabs = () => (
+    <Animated.View style={[
+      styles.fixedHeader,
+      {
+        opacity: scrollY.interpolate({
+          inputRange: [width * 0.7, width * 0.9],
+          outputRange: [0, 1],
+          extrapolate: 'clamp',
+        }),
+        transform: [{
+          translateY: scrollY.interpolate({
             inputRange: [width * 0.7, width * 0.9],
-            outputRange: [0, 1],
+            outputRange: [-60, 0],
             extrapolate: 'clamp',
           }),
-          transform: [{
-            translateY: scrollY.interpolate({
-              inputRange: [width * 0.7, width * 0.9],
-              outputRange: [-60, 0],
-              extrapolate: 'clamp',
-            }),
-          }],
-        }
-      ]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTabs}>
-          {['Gallery', 'Details', 'Reviews', 'Recommended'].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => scrollToSection(tab)}
-              style={styles.headerTabButton}
-            >
-              <Text style={[
-                styles.headerTab,
-                activeSection === tab && styles.activeHeaderTab
-              ]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <TouchableOpacity 
-          style={styles.moreButtonContainer}
-          onPress={handleShare}
-        >
-          <Text style={styles.moreButton}>⋯</Text>
-        </TouchableOpacity>
-      </Animated.View>
+        }],
+      }
+    ]}>
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text style={styles.backButton}>←</Text>
+      </TouchableOpacity>
+      <View style={styles.headerTabs}>
+        {['Gallery', 'Details', 'Reviews', 'Recommended'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => scrollToSection(tab)}
+            style={styles.headerTabButton}
+          >
+            <Text style={[
+              styles.headerTab,
+              activeSection === tab && styles.activeHeaderTab
+            ]}>
+              {tab}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TouchableOpacity style={styles.moreButtonContainer}>
+        <Text style={styles.moreButton}>⋯</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 
-      {/* Floating More Button - Only show when header is hidden */}
-      <Animated.View style={[
-        styles.floatingMoreButton,
-        {
-          opacity: scrollY.interpolate({
-            inputRange: [width * 0.7, width * 0.9],
-            outputRange: [1, 0],
-            extrapolate: 'clamp',
-          }),
-        }
-      ]}>
-        <TouchableOpacity onPress={handleShare}>
-          <Text style={styles.moreButton}>⋯</Text>
-        </TouchableOpacity>
-      </Animated.View>
+  // Custom floating more button component
+  const FloatingMoreButton = () => (
+    <Animated.View style={[
+      styles.floatingMoreButton,
+      {
+        opacity: scrollY.interpolate({
+          inputRange: [width * 0.7, width * 0.9],
+          outputRange: [1, 0],
+          extrapolate: 'clamp',
+        }),
+      }
+    ]}>
+      <TouchableOpacity>
+        <Text style={styles.moreButton}>⋯</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
+  // Artist card component
+  const ArtistCard = () => (
+    <View style={styles.artistBox}>
+      <TouchableOpacity style={styles.artistCard} onPress={handleArtistPress}>
+        <View style={styles.artistInfo}>
+          <Image source={{ uri: galleryItem.artist.avatar }} style={styles.artistAvatar} />
+          <View style={styles.artistDetails}>
+            <Text style={styles.artistName}>{galleryItem.artist.name}</Text>
+            <View style={styles.ratingRow}>
+              <Text style={styles.rating}>⭐{galleryItem.artist.rating}</Text>
+              <Text style={styles.reviewCount}>{galleryItem.artist.reviewCount} reviews</Text>
+            </View>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </View>
+        <View style={styles.artistStats}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{galleryItem.artist.completionRate}%</Text>
+            <Text style={styles.statLabel}>Order Completion Rate</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{galleryItem.artist.onTimeRate}%</Text>
+            <Text style={styles.statLabel}>On-time Delivery Rate</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{galleryItem.artist.avgResponseTime}</Text>
+            <Text style={styles.statLabel}>Avg Response Time</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (!isStockLoaded) {
+    return (
+      <View style={AppStyles.container}>
+        <LoadingState text="Loading gallery details..." />
+      </View>
+    );
+  }
+
+  return (
+    <View style={AppStyles.container}>
+      {/* Floating Header Tabs */}
+      <FloatingHeaderTabs />
+
+      {/* Floating More Button */}
+      <FloatingMoreButton />
 
       <Animated.ScrollView 
         ref={scrollViewRef}
@@ -422,7 +455,7 @@ No.2 Modification Related:
         scrollEventThrottle={16}
       >
         {/* Image Gallery */}
-        <View ref={galleryRef} style={styles.imageGallery}>
+        <View style={styles.imageGallery}>
           <FlatList
             ref={flatListRef}
             data={galleryItem.images}
@@ -446,7 +479,7 @@ No.2 Modification Related:
             ))}
           </View>
           
-          {/* Stock Alert Overlay */}
+          {/* Stock alerts using StatusBadge concept */}
           {stock <= 2 && stock > 0 && (
             <View style={styles.stockAlert}>
               <Text style={styles.stockAlertText}>⚡ Limited Stock!</Text>
@@ -483,38 +516,162 @@ No.2 Modification Related:
           </View>
         </View>
 
-        {/* Artist Info Box */}
-        <View style={styles.artistBox}>
-          <TouchableOpacity style={styles.artistCard} onPress={handleArtistPress}>
-            <View style={styles.artistInfo}>
-              <Image source={{ uri: galleryItem.artist.avatar }} style={styles.artistAvatar} />
-              <View style={styles.artistDetails}>
-                <Text style={styles.artistName}>{galleryItem.artist.name}</Text>
-                <View style={styles.ratingRow}>
-                  <Text style={styles.rating}>⭐{galleryItem.artist.rating}</Text>
-                  <Text style={styles.reviewCount}>{galleryItem.artist.reviewCount} reviews</Text>
-                </View>
+        {/* Artist Info using component pattern */}
+        <ArtistCard />
+
+        {/* Gallery Details Box */}
+        <View 
+          style={styles.detailsBox}
+          onLayout={(event) => handleSectionLayout('details', event)}
+        >
+          <Text style={styles.sectionTitle}>Gallery Details</Text>
+          
+          <View style={[styles.detailSection, styles.contentSection]}>
+            <Text style={styles.detailSectionTitle}>🎨 Content</Text>
+            <Text style={styles.detailSectionContent}>{galleryItem.details.content}</Text>
+          </View>
+
+          <View style={[styles.detailSection, styles.preferredSection]}>
+            <Text style={styles.detailSectionTitle}>❤️ Preferred Types</Text>
+            <Text style={styles.detailSectionContent}>{galleryItem.details.preferredTypes}</Text>
+          </View>
+
+          <View style={[styles.detailSection, styles.notAcceptedSection]}>
+            <Text style={styles.detailSectionTitle}>🚫 Not Accepted Types</Text>
+            <Text style={styles.detailSectionContent}>{galleryItem.details.notAcceptedTypes}</Text>
+          </View>
+
+          <View style={[styles.detailCard, styles.acceptsTextSection]}>
+            <Text style={styles.detailIcon}>📝</Text>
+            <View style={styles.detailContent}>
+              <Text style={styles.detailLabel}>Accepts Text Design</Text>
+              <Text style={styles.detailValue}>{galleryItem.details.acceptsTextDesign ? '✓' : '✗'}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.detailDescription}>{galleryItem.details.description}</Text>
+
+          <View style={styles.galleryImagesSection}>
+            <Text style={styles.galleryImagesTitle}>Gallery Preview</Text>
+            {galleryItem.details.galleryImages.map((image, index) => (
+              <View key={index} style={styles.verticalImageContainer}>
+                <Image 
+                  source={{ uri: image }} 
+                  style={styles.verticalGalleryImage} 
+                  resizeMode="contain"
+                />
               </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Specifications Box */}
+        <View style={styles.specificationsBox}>
+          <Text style={styles.sectionTitle}>Artwork Specifications</Text>
+          <View style={styles.specTable}>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Gallery Type</Text>
+              <Text style={styles.specValue}>{galleryItem.specs.type}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Color Mode</Text>
+              <Text style={styles.specValue}>{galleryItem.specs.colorMode}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Dimensions</Text>
+              <Text style={styles.specValue}>{galleryItem.specs.dimensions}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>File Format</Text>
+              <Text style={styles.specValue}>{galleryItem.specs.format}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Publishing Rights</Text>
+              <Text style={styles.specValue}>{galleryItem.specs.publishRights}</Text>
+            </View>
+            <View style={styles.specRow}>
+              <Text style={styles.specLabel}>Content Style</Text>
+              <Text style={styles.specValue}>{galleryItem.specs.contentStyle}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Creation Milestones Box */}
+        <View style={styles.milestonesBox}>
+          <Text style={styles.sectionTitle}>Creation Milestones</Text>
+          <Text style={styles.milestonesDescription}>
+            The artist will provide updates at the following milestones for buyer confirmation. 
+            If disputes arise due to buyer reasons during collaboration, buyers must pay according to confirmed milestones.
+          </Text>
+          <View style={styles.milestoneSlider}>
+            <View style={styles.sliderTrack}>
+              <View style={styles.sliderProgress} />
+              <View style={[styles.sliderPoint, styles.sliderPointActive]} />
+              <View style={[styles.sliderPoint, styles.sliderPointActive]} />
+            </View>
+            <View style={styles.milestoneLabels}>
+              <Text style={styles.milestoneLabel}>70%\nDraft</Text>
+              <Text style={styles.milestoneLabel}>100%\nFinal</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Reviews Box */}
+        <View 
+          style={styles.reviewsBox}
+          onLayout={(event) => handleSectionLayout('reviews', event)}
+        >
+          <View style={styles.reviewsHeader}>
+            <Text style={styles.sectionTitle}>Gallery Reviews</Text>
+            <TouchableOpacity>
               <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {reviews.slice(0, 3).map((review) => (
+            <View key={review.id} style={styles.reviewItem}>
+              <Image source={{ uri: review.avatar }} style={styles.reviewAvatar} />
+              <View style={styles.reviewContent}>
+                <Text style={styles.reviewUserName}>{review.userName}</Text>
+                <View style={styles.reviewStars}>
+                  {[...Array(review.rating)].map((_, i) => (
+                    <Text key={i} style={styles.star}>⭐</Text>
+                  ))}
+                </View>
+                <Text style={styles.reviewComment}>{review.comment}</Text>
+              </View>
             </View>
-            <View style={styles.artistStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{galleryItem.artist.completionRate}%</Text>
-                <Text style={styles.statLabel}>Order Completion Rate</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{galleryItem.artist.onTimeRate}%</Text>
-                <Text style={styles.statLabel}>On-time Delivery Rate</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{galleryItem.artist.avgResponseTime}</Text>
-                <Text style={styles.statLabel}>Avg Response Time</Text>
-              </View>
-            </View>
+          ))}
+          
+          <TouchableOpacity style={styles.viewAllReviews}>
+            <Text style={styles.viewAllReviewsText}>View all 11 reviews ›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Shortened content for demo */}
+        {/* Recommended Box */}
+        <View 
+          style={styles.recommendedBox}
+          onLayout={(event) => handleSectionLayout('recommended', event)}
+        >
+          <Text style={styles.recommendedTitle}>💖 You might also like these galleries from this artist</Text>
+          <View style={styles.recommendedGrid}>
+            {recommendedItems.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.recommendedItem}>
+                <View style={styles.recommendedImageContainer}>
+                  <View style={styles.recommendedPlaceholder}>
+                    <Text style={styles.placeholderText}>🎨</Text>
+                  </View>
+                  {item.isExpress && (
+                    <View style={styles.expressTag}>
+                      <Text style={styles.expressText}>24H</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <View style={styles.bottomPadding} />
       </Animated.ScrollView>
 
@@ -582,15 +739,12 @@ No.2 Modification Related:
           </View>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
+  // Fixed header
   fixedHeader: {
     position: 'absolute',
     top: 0,
@@ -599,43 +753,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 50,
-    backgroundColor: '#0A0A0A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.lg,
+    ...AppStyles.header,
+    backgroundColor: Colors.background,
+    ...Layout.borderBottom,
     zIndex: 1000,
   },
   floatingMoreButton: {
     position: 'absolute',
     top: 50,
-    right: 20,
+    right: Layout.spacing.xl,
     zIndex: 999,
   },
   backButton: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   headerTabs: {
     flexDirection: 'row',
     flex: 1,
     justifyContent: 'space-between',
-    marginHorizontal: 20,
-    paddingRight: 10,
+    marginHorizontal: Layout.spacing.xl,
+    paddingRight: Layout.spacing.md,
   },
   headerTabButton: {
-    paddingVertical: 4,
+    paddingVertical: Layout.spacing.xs,
   },
   headerTab: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
   },
   activeHeaderTab: {
-    color: '#00A8FF',
+    color: Colors.primary,
     borderBottomWidth: 2,
-    borderBottomColor: '#00A8FF',
-    paddingBottom: 4,
+    borderBottomColor: Colors.primary,
+    paddingBottom: Layout.spacing.xs,
   },
   moreButtonContainer: {
     width: 30,
@@ -643,7 +796,7 @@ const styles = StyleSheet.create({
   },
   moreButton: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   content: {
     flex: 1,
@@ -651,14 +804,14 @@ const styles = StyleSheet.create({
   imageGallery: {
     height: width,
     position: 'relative',
-    backgroundColor: '#000',
+    backgroundColor: Colors.background,
   },
   imageContainer: {
     width: width,
     height: width,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: Colors.background,
   },
   galleryImage: {
     width: width,
@@ -666,23 +819,23 @@ const styles = StyleSheet.create({
   },
   imageIndicators: {
     position: 'absolute',
-    top: 20,
+    top: Layout.spacing.xl,
     alignSelf: 'center',
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: Colors.blackTransparent,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.lg,
   },
   indicator: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    marginHorizontal: 4,
+    borderRadius: Layout.radius.xs,
+    backgroundColor: Colors.whiteTransparent,
+    marginHorizontal: Layout.spacing.xs,
   },
   activeIndicator: {
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.primary,
   },
   
   // Stock alerts
@@ -690,14 +843,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     alignSelf: 'center',
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: Colors.warning,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.xl,
   },
   stockAlertText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: Colors.text,
+    ...Typography.bodySmall,
     fontWeight: 'bold',
   },
   soldOutOverlay: {
@@ -706,151 +859,387 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.overlay,
+    ...Layout.columnCenter,
   },
   soldOutText: {
-    color: '#FF5722',
+    color: Colors.error,
     fontSize: 32,
     fontWeight: 'bold',
     transform: [{ rotate: '-15deg' }],
   },
 
   basicInfoBox: {
-    backgroundColor: '#0A0A0A',
-    padding: 20,
-    marginBottom: 12,
+    backgroundColor: Colors.background,
+    padding: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
   },
   priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.md,
   },
   price: {
+    ...Typography.price,
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FF6B35',
   },
   soldCount: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
   titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.md,
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h4,
     flex: 1,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
   },
   categoryTag: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.lg,
   },
   categoryText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...Typography.badge,
   },
   deadline: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 8,
+    ...Typography.bodySmallMuted,
+    marginBottom: Layout.spacing.sm,
   },
   
   // Enhanced stock display
   stockRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    ...Layout.rowSpaceBetween,
   },
   stockLabel: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
   stockText: {
-    fontSize: 14,
+    ...Typography.bodySmall,
     fontWeight: 'bold',
   },
 
   artistBox: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    borderRadius: 12,
+    ...Layout.card,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
   },
   artistCard: {
-    padding: 16,
+    padding: Layout.spacing.lg,
   },
   artistInfo: {
-    flexDirection: 'row',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   artistAvatar: {
+    ...Layout.avatar,
     width: 50,
     height: 50,
     borderRadius: 25,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
   },
   artistDetails: {
     flex: 1,
   },
   artistName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.xs,
   },
   ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...Layout.row,
   },
   rating: {
-    fontSize: 14,
-    color: '#FFD700',
-    marginRight: 8,
+    ...Typography.rating,
+    marginRight: Layout.spacing.sm,
   },
   reviewCount: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
   chevron: {
     fontSize: 20,
-    color: '#888',
+    color: Colors.textMuted,
   },
   artistStats: {
-    flexDirection: 'row',
+    ...Layout.row,
     justifyContent: 'space-between',
-    backgroundColor: '#0A0A0A',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: Colors.background,
+    borderRadius: Layout.radius.sm,
+    padding: Layout.spacing.lg,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.xs,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
     textAlign: 'center',
   },
-
+  detailsBox: {
+    ...Layout.card,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.xl,
+  },
+  sectionTitle: {
+    ...Typography.h5,
+    marginBottom: Layout.spacing.lg,
+  },
+  detailSection: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  contentSection: {
+    backgroundColor: '#1A2A3A',
+  },
+  preferredSection: {
+    backgroundColor: '#2A3A2A',
+  },
+  notAcceptedSection: {
+    backgroundColor: '#3A2A1A',
+  },
+  acceptsTextSection: {
+    backgroundColor: '#1A2A3A',
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  detailSectionContent: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    lineHeight: 20,
+  },
+  galleryImagesSection: {
+    marginBottom: Layout.spacing.lg,
+  },
+  galleryImagesTitle: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.md,
+  },
+  verticalImageContainer: {
+    width: '100%',
+    height: 200,
+    marginBottom: Layout.spacing.md,
+    borderRadius: Layout.radius.md,
+    overflow: 'hidden',
+    backgroundColor: Colors.card,
+  },
+  verticalGalleryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  detailCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  detailIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    marginTop: 2,
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: Colors.text,
+    lineHeight: 22,
+  },
+  detailDescription: {
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 22,
+    marginTop: 16,
+  },
+  specificationsBox: {
+    ...Layout.card,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.xl,
+  },
+  specTable: {
+    backgroundColor: Colors.card,
+    borderRadius: Layout.radius.sm,
+    overflow: 'hidden',
+  },
+  specRow: {
+    ...Layout.rowSpaceBetween,
+    padding: Layout.spacing.lg,
+    ...Layout.borderBottom,
+  },
+  specLabel: {
+    ...Typography.bodySmallMuted,
+    flex: 1,
+  },
+  specValue: {
+    ...Typography.bodySmall,
+    flex: 2,
+    textAlign: 'right',
+  },
+  milestonesBox: {
+    ...Layout.card,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.xl,
+  },
+  milestonesDescription: {
+    ...Typography.bodyMuted,
+    lineHeight: 20,
+    marginBottom: Layout.spacing.xl,
+  },
+  milestoneSlider: {
+    alignItems: 'center',
+  },
+  sliderTrack: {
+    width: 200,
+    height: 4,
+    backgroundColor: Colors.card,
+    borderRadius: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
+  },
+  sliderProgress: {
+    position: 'absolute',
+    left: 0,
+    width: '100%',
+    height: 4,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+  },
+  sliderPoint: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.card,
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  sliderPointActive: {
+    backgroundColor: Colors.primary,
+  },
+  milestoneLabels: {
+    ...Layout.row,
+    justifyContent: 'space-between',
+    width: 200,
+    marginTop: Layout.spacing.md,
+  },
+  milestoneLabel: {
+    ...Typography.caption,
+    color: Colors.primary,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  reviewsBox: {
+    ...Layout.card,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.xl,
+  },
+  reviewsHeader: {
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.lg,
+  },
+  reviewItem: {
+    ...Layout.row,
+    marginBottom: Layout.spacing.lg,
+  },
+  reviewAvatar: {
+    ...Layout.avatar,
+    marginRight: Layout.spacing.md,
+  },
+  reviewContent: {
+    flex: 1,
+  },
+  reviewUserName: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.xs,
+  },
+  reviewStars: {
+    ...Layout.row,
+    marginBottom: Layout.spacing.sm,
+  },
+  star: {
+    fontSize: 14,
+    marginRight: 2,
+  },
+  reviewComment: {
+    ...Typography.body,
+    lineHeight: 20,
+  },
+  viewAllReviews: {
+    alignItems: 'center',
+    paddingVertical: Layout.spacing.md,
+  },
+  viewAllReviewsText: {
+    ...Typography.bodySmall,
+    color: Colors.primary,
+  },
+  recommendedBox: {
+    ...Layout.card,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.xl,
+  },
+  recommendedTitle: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.lg,
+    textAlign: 'center',
+  },
+  recommendedGrid: {
+    ...Layout.row,
+    justifyContent: 'space-between',
+  },
+  recommendedItem: {
+    width: '48%',
+    position: 'relative',
+  },
+  recommendedImageContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: Layout.radius.md,
+    overflow: 'hidden',
+  },
+  recommendedPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: Colors.card,
+    ...Layout.columnCenter,
+  },
+  placeholderText: {
+    fontSize: 32,
+    color: Colors.textMuted,
+  },
+  expressTag: {
+    position: 'absolute',
+    top: Layout.spacing.sm,
+    left: Layout.spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.sm,
+  },
+  expressText: {
+    ...Typography.badge,
+  },
   bottomPadding: {
     height: 100,
   },
@@ -861,64 +1250,60 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: Colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
+    paddingBottom: Layout.spacing.lg,
+    ...Layout.borderTop,
   },
   bottomAction: {
     alignItems: 'center',
-    marginRight: 16,
-    padding: 4,
+    marginRight: Layout.spacing.lg,
+    padding: Layout.spacing.xs,
   },
   bottomActionIcon: {
     fontSize: 18,
     marginBottom: 2,
-    color: '#888',
+    color: Colors.textMuted,
   },
   activeAction: {
-    color: '#FFD700',
+    color: Colors.rating,
   },
   activeWishlist: {
     color: '#FF6B9D',
   },
   bottomActionText: {
-    fontSize: 10,
-    color: '#888',
+    ...Typography.caption,
   },
   activeActionText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontWeight: 'bold',
   },
   purchaseButton: {
     flex: 1,
-    backgroundColor: '#00A8FF',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    paddingVertical: Layout.spacing.md,
+    paddingHorizontal: Layout.spacing.lg,
+    borderRadius: Layout.radius.lg,
     alignItems: 'center',
   },
   soldOutButton: {
-    backgroundColor: '#666',
+    backgroundColor: Colors.textMuted,
   },
   loadingButton: {
-    backgroundColor: '#444',
+    backgroundColor: Colors.card,
   },
   purchaseButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     width: '100%',
   },
   purchaseButtonLeft: {
     alignItems: 'flex-start',
   },
   deadlineText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 10,
     opacity: 0.9,
     marginBottom: 2,
@@ -926,17 +1311,15 @@ const styles = StyleSheet.create({
   purchaseButtonDivider: {
     width: 1,
     height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: 12,
+    backgroundColor: Colors.whiteTransparent,
+    marginHorizontal: Layout.spacing.md,
   },
   purchaseButtonText: {
-    color: '#FFFFFF',
+    ...Typography.button,
     fontSize: 13,
-    fontWeight: 'bold',
   },
   loadingText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    ...Typography.body,
     fontWeight: 'bold',
   },
 });

@@ -11,7 +11,6 @@ import {
     View
 } from 'react-native';
 
-// Import your component library
 import LoadingState from './components/common/LoadingState';
 import { Colors } from './components/styles/Colors';
 import GlobalStyles from './components/styles/GlobalStyles';
