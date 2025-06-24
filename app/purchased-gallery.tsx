@@ -2,16 +2,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+
+// Import your component library
+import EmptyState from './components/common/EmptyState';
+import Header from './components/common/Header';
+import LoadingState from './components/common/LoadingState';
+import StatusBadge from './components/common/StatusBadge';
+import { Colors } from './components/styles/Colors';
+import GlobalStyles from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -72,33 +81,6 @@ const PurchasedGalleryPage = () => {
   };
 
   const filterOptions = ['All', 'In Progress', 'Delivered', 'Completed'];
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return '#4CAF50';
-      case 'in_progress': return '#FF9800';
-      case 'delivered': return '#2196F3';
-      default: return '#888';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      case 'delivered': return 'Delivered';
-      default: return 'Unknown';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed': return '✅';
-      case 'in_progress': return '🎨';
-      case 'delivered': return '📦';
-      default: return '❓';
-    }
-  };
 
   const filteredItems = purchasedItems.filter(item => {
     if (activeFilter === 'All') return true;
@@ -187,10 +169,11 @@ const PurchasedGalleryPage = () => {
         
         <View style={styles.itemMeta}>
           <Text style={styles.itemPrice}>${item.totalPaid || item.price}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Text style={styles.statusIcon}>{getStatusIcon(item.status)}</Text>
-            <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
-          </View>
+          <StatusBadge 
+            status={item.status === 'in_progress' ? 'in_progress' : 
+                   item.status === 'delivered' ? 'delivered' : 'completed'}
+            size="small"
+          />
         </View>
       </View>
 
@@ -262,9 +245,13 @@ const PurchasedGalleryPage = () => {
         )}
 
         {item.hasReviewed && (
-          <View style={styles.ratedBadge}>
-            <Text style={styles.ratedText}>⭐ Rated {item.rating}/5</Text>
-          </View>
+          <StatusBadge 
+            status="completed" 
+            text={`Rated ${item.rating}/5`}
+            icon="⭐"
+            size="small"
+            style={styles.ratedBadge}
+          />
         )}
       </View>
 
@@ -278,24 +265,19 @@ const PurchasedGalleryPage = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Purchased Gallery</Text>
-          <View style={styles.placeholder} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your purchases...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={GlobalStyles.container}>
+        <Header 
+          title="Purchased Gallery"
+          rightElement={<View style={styles.placeholder} />}
+        />
+        <LoadingState text="Loading your purchases..." />
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <View style={GlobalStyles.container}>
+      {/* Header - 手动实现以确保正确的 padding */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
@@ -376,8 +358,8 @@ const PurchasedGalleryPage = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00A8FF"
-            colors={['#00A8FF']}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
           />
         }
       >
@@ -402,34 +384,28 @@ const PurchasedGalleryPage = () => {
         {filteredItems.length > 0 ? (
           filteredItems.map((item) => renderPurchasedItem(item))
         ) : purchasedItems.length > 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>🔍</Text>
-            <Text style={styles.emptyStateTitle}>No items found</Text>
-            <Text style={styles.emptyStateText}>
-              No items with "{activeFilter}" status found.
-            </Text>
-          </View>
+          <EmptyState
+            icon="🔍"
+            title="No items found"
+            description={`No items with "${activeFilter}" status found.`}
+            size="medium"
+          />
         ) : null}
 
-        <View style={styles.bottomPadding} />
+        <View style={GlobalStyles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingTop: 50, 
+    paddingBottom: Layout.spacing.lg,
+    ...Layout.borderBottom,
   },
   backButton: {
     width: 40,
@@ -439,13 +415,13 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h5,
   },
+
+  // Header elements
   placeholder: {
     width: 40,
   },
@@ -459,119 +435,98 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   
-  // Loading State
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#888',
-  },
-  
-  // Filter Tabs
   filterContainer: {
-    paddingVertical: 16,
-    paddingLeft: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingVertical: Layout.spacing.sm, 
+    paddingLeft: Layout.spacing.xl,
+    ...Layout.borderBottom,
   },
   filterTab: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginRight: 16,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm, 
+    marginRight: Layout.spacing.lg,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   activeFilterTab: {
-    borderBottomColor: '#00A8FF',
+    borderBottomColor: Colors.primary,
   },
   filterText: {
-    fontSize: 16,
-    color: '#888',
+    ...Typography.body,
+    color: Colors.textMuted,
   },
   activeFilterText: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   filterCount: {
-    backgroundColor: '#333',
-    borderRadius: 10,
+    backgroundColor: Colors.border,
+    borderRadius: Layout.radius.md,
     minWidth: 20,
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: Layout.spacing.sm,
   },
   filterCountText: {
-    color: '#FFFFFF',
+    ...Typography.badge,
     fontSize: 10,
-    fontWeight: 'bold',
   },
 
   // Welcome Card
   welcomeCard: {
-    backgroundColor: '#1A2A3A',
-    marginHorizontal: 20,
-    marginVertical: 20,
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: Colors.artist,
+    ...Layout.marginHorizontal,
+    marginVertical: Layout.spacing.xl,
+    borderRadius: Layout.radius.lg,
+    padding: Layout.spacing.xxl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#00A8FF',
+    borderColor: Colors.primary,
   },
   welcomeIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   welcomeTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
+    ...Typography.h4,
+    marginBottom: Layout.spacing.md,
     textAlign: 'center',
   },
   welcomeText: {
-    fontSize: 14,
-    color: '#CCCCCC',
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: Layout.spacing.xl,
   },
 
   // Summary Card
   summaryCard: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginVertical: 16,
-    borderRadius: 12,
-    padding: 16,
+    ...Layout.card,
+    ...Layout.marginHorizontal,
+    marginVertical: Layout.spacing.lg,
   },
   summaryTitle: {
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: Layout.spacing.md,
   },
   summaryStats: {
-    flexDirection: 'row',
+    ...Layout.row,
     justifyContent: 'space-around',
   },
   summaryItem: {
     alignItems: 'center',
   },
   summaryNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#00A8FF',
-    marginBottom: 4,
+    ...Typography.h4,
+    color: Colors.primary,
+    marginBottom: Layout.spacing.xs,
   },
   summaryLabel: {
-    fontSize: 11,
-    color: '#888',
+    ...Typography.caption,
     textAlign: 'center',
   },
 
@@ -582,257 +537,184 @@ const styles = StyleSheet.create({
 
   // Purchased Item Card
   purchasedItem: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 16,
+    ...Layout.card,
+    ...Layout.marginHorizontal,
+    marginBottom: Layout.spacing.lg,
   },
   itemHeader: {
-    flexDirection: 'row',
+    ...Layout.row,
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: Layout.spacing.md,
   },
   itemBasicInfo: {
-    flexDirection: 'row',
+    ...Layout.row,
     flex: 1,
   },
   itemImage: {
     width: 80,
     height: 80,
-    borderRadius: 12,
-    marginRight: 12,
+    borderRadius: Layout.radius.md,
+    marginRight: Layout.spacing.md,
   },
   itemDetails: {
     flex: 1,
   },
   itemTitle: {
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: Layout.spacing.sm,
     lineHeight: 20,
   },
   artistInfo: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Layout.spacing.xs,
   },
   artistMiniAvatar: {
     width: 20,
     height: 20,
-    borderRadius: 10,
-    marginRight: 6,
+    borderRadius: Layout.radius.md,
+    marginRight: Layout.spacing.sm,
   },
   artistName: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
   },
   orderNumber: {
-    fontSize: 12,
-    color: '#666',
+    ...Typography.caption,
+    color: Colors.textDisabled,
     marginTop: 2,
   },
   itemMeta: {
     alignItems: 'flex-end',
   },
   itemPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 8,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    ...Typography.price,
+    marginBottom: Layout.spacing.sm,
   },
 
   // Progress Section
   progressSection: {
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 8,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.md,
+    backgroundColor: Colors.card,
+    borderRadius: Layout.radius.sm,
   },
   progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.sm,
   },
   progressLabel: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
     fontWeight: 'bold',
   },
   progressPercentage: {
-    fontSize: 14,
-    color: '#00A8FF',
+    ...Typography.bodySmall,
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   progressBar: {
-    height: 6,
-    backgroundColor: '#333',
-    borderRadius: 3,
-    marginBottom: 6,
+    ...GlobalStyles.progressBar,
+    marginBottom: Layout.spacing.sm,
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#00A8FF',
-    borderRadius: 3,
+    ...GlobalStyles.progressFill,
   },
   lastUpdate: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
   },
 
   // Delivery Section
   deliverySection: {
-    marginBottom: 12,
+    marginBottom: Layout.spacing.md,
   },
   deliveryTitle: {
-    fontSize: 14,
+    ...Typography.bodySmall,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
   },
   deliveredFiles: {
-    flexDirection: 'row',
-    paddingRight: 16,
+    ...Layout.row,
+    paddingRight: Layout.spacing.lg,
   },
   deliveredFile: {
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
     alignItems: 'center',
   },
   deliveredFileImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
-    marginBottom: 4,
+    borderRadius: Layout.radius.sm,
+    marginBottom: Layout.spacing.xs,
   },
   fileLabel: {
-    fontSize: 10,
-    color: '#888',
+    ...Typography.caption,
     textAlign: 'center',
   },
 
   // Action Buttons
   actionButtons: {
-    flexDirection: 'row',
+    ...Layout.row,
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+    gap: Layout.spacing.sm,
+    marginBottom: Layout.spacing.md,
   },
   contactButton: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.lg,
   },
   contactButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...Typography.buttonSmall,
   },
   confirmButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    backgroundColor: Colors.success,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.lg,
   },
   confirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...Typography.buttonSmall,
   },
   reviewButton: {
-    backgroundColor: '#FF9800',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    backgroundColor: Colors.warning,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.lg,
   },
   reviewButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...Typography.buttonSmall,
   },
   ratedBadge: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  ratedText: {
-    color: '#000000',
-    fontSize: 12,
-    fontWeight: 'bold',
+    backgroundColor: Colors.rating,
   },
 
-  // Purchase Info
+
   purchaseInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
+    ...Layout.rowSpaceBetween,
+    paddingTop: Layout.spacing.md,
+    ...Layout.borderTop,
   },
   purchaseDate: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
+    flex: 1, 
   },
   deadline: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
+    flex: 1, 
+    textAlign: 'right', 
   },
 
-  // Empty State
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
+
   browseButton: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.xxl,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.radius.xxl,
   },
   browseButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  bottomPadding: {
-    height: 40,
+    ...Typography.button,
   },
 });
 

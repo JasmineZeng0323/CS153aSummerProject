@@ -1,11 +1,9 @@
+// homepage.tsx - Updated with Search Integration
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
-  Image,
-  Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +19,30 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 
+// Import components
+import BottomNavigation from './components/BottomNavigation';
+import GalleryCard from './components/common/GalleryCard';
+import ProjectCard from './components/common/ProjectCard';
+import SearchComponent from './components/common/SearchComponent'; // 🎯 NEW
+import FilterModal, { FilterSection } from './components/forms/FilterModal';
+
+// Import styles
+import { Colors } from './components/styles/Colors';
+import GlobalStyles from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0, 
+  },
+  header: {
+    paddingTop: 50, 
+  },
+};
+
 const { width: screenWidth } = Dimensions.get('window');
 
 const Homepage = () => {
@@ -28,7 +50,16 @@ const Homepage = () => {
   const [activeCategory, setActiveCategory] = useState('Recommended');
   const [is24HourExpress, setIs24HourExpress] = useState(false);
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState(['All']);
+  const [showPriceTimeFilter, setShowPriceTimeFilter] = useState(false);
+  const [showSearch, setShowSearch] = useState(false); // 🎯 NEW: Search modal state
+  const [searchQuery, setSearchQuery] = useState(''); // 🎯 NEW: Current search query
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({
+    categories: ['All'],
+    contentStyle: [],
+    preferences: [],
+    priceRange: ['All'],
+    timeRange: ['All']
+  });
   const [userInfo, setUserInfo] = useState(null);
 
   // Animation values for page swiping
@@ -91,8 +122,8 @@ const Homepage = () => {
     transform: [{ translateX: translateX.value }],
   }));
 
-  // Mock data for gallery items
-  const galleryItems = [
+  // Mock data for gallery items - with category classification
+  const allGalleryItems = [
     {
       id: 1,
       title: 'Ultra Fast Portrait [3h]',
@@ -102,7 +133,8 @@ const Homepage = () => {
       artistAvatar: 'https://i.pravatar.cc/40?img=1',
       image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop&crop=center',
       isExpress: true,
-      category: 'Portrait'
+      category: 'Portrait',
+      contentCategory: 'Recommended'
     },
     {
       id: 2,
@@ -113,7 +145,8 @@ const Homepage = () => {
       artistAvatar: 'https://i.pravatar.cc/40?img=2',
       image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop&crop=center',
       isExpress: false,
-      category: 'Portrait'
+      category: 'Portrait',
+      contentCategory: 'Recommended'
     },
     {
       id: 3,
@@ -124,7 +157,8 @@ const Homepage = () => {
       artistAvatar: 'https://i.pravatar.cc/40?img=3',
       image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop&crop=center',
       isExpress: false,
-      category: 'Portrait'
+      category: 'Portrait',
+      contentCategory: 'New'
     },
     {
       id: 4,
@@ -135,7 +169,8 @@ const Homepage = () => {
       artistAvatar: 'https://i.pravatar.cc/40?img=4',
       image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop&crop=center',
       isExpress: false,
-      category: 'Character Set'
+      category: 'Character Set',
+      contentCategory: 'New'
     },
     {
       id: 5,
@@ -146,7 +181,8 @@ const Homepage = () => {
       artistAvatar: 'https://i.pravatar.cc/40?img=5',
       image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop&crop=center',
       isExpress: false,
-      category: 'Character Design'
+      category: 'Character Design',
+      contentCategory: 'Pre-order'
     },
     {
       id: 6,
@@ -157,11 +193,36 @@ const Homepage = () => {
       artistAvatar: 'https://i.pravatar.cc/40?img=6',
       image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop&crop=center',
       isExpress: true,
-      category: 'Q-Version'
+      category: 'Q-Version',
+      contentCategory: 'Following'
+    },
+    {
+      id: 7,
+      title: 'Limited Edition Pre-order',
+      price: 899,
+      sold: 2,
+      artistName: 'LimitedArt',
+      artistAvatar: 'https://i.pravatar.cc/40?img=7',
+      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop&crop=center',
+      isExpress: false,
+      category: 'Portrait',
+      contentCategory: 'Pre-order'
+    },
+    {
+      id: 8,
+      title: 'Following Artist Special',
+      price: 299,
+      sold: 15,
+      artistName: 'FollowedArt',
+      artistAvatar: 'https://i.pravatar.cc/40?img=8',
+      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop&crop=center',
+      isExpress: false,
+      category: 'Character Design',
+      contentCategory: 'Following'
     }
   ];
 
-  // Mock data for projects (same as the projects page)
+  // Mock data for projects
   const projectItems = [
     {
       id: 1,
@@ -210,138 +271,276 @@ const Homepage = () => {
       deadline: '2026-04-30',
       clientName: 'Fox Birthday',
       clientAvatar: 'https://i.pravatar.cc/60?img=4',
-      isVerified: true,
-      isHighQuality: true,
       image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
       tags: ['Real Name Verified', 'High Quality']
     }
   ];
 
   const categories = ['Recommended', 'New', 'Pre-order', 'Following'];
-  
-  const allCategories = [
-    'All', 'Portrait', 'Q-Version', 'Half Body', 'Full Body',
-    'Standing Art', 'Character Set', 'Outfit Design', 'Wallpaper',
-    'Emoji Pack', 'Live2D', 'Graphic Design'
+
+  // Filter sections for FilterModal - Updated with grid layout
+  const filterSections: FilterSection[] = [
+    {
+      id: 'categories',
+      title: 'All Categories',
+      multiSelect: true,
+      options: [
+        { id: 'All', title: 'All' },
+        { id: 'Portrait', title: 'Portrait', icon: '👤' },
+        { id: 'Q-Version', title: 'Q-Version', icon: '🎭' },
+        { id: 'Half Body', title: 'Half Body', icon: '👔' },
+        { id: 'Full Body', title: 'Full Body', icon: '🧍' },
+        { id: 'Standing Art', title: 'Standing Art', icon: '🕴️' },
+        { id: 'Character Set', title: 'Character Set', icon: '👥' },
+        { id: 'Outfit Design', title: 'Outfit Design', icon: '👗' },
+        { id: 'Wallpaper', title: 'Wallpaper', icon: '🖼️' },
+        { id: 'Emoji Pack', title: 'Emoji Pack', icon: '😊' },
+        { id: 'Live2D', title: 'Live2D', icon: '🎮' },
+        { id: 'Graphic Design', title: 'Graphic Design', icon: '🎨' }
+      ]
+    },
+    {
+      id: 'contentStyle',
+      title: 'Content Style',
+      multiSelect: true,
+      options: [
+        { id: 'Q-Version', title: 'Q-Version', icon: '🎭' },
+        { id: 'Realistic', title: 'Realistic', icon: '📸' },
+        { id: 'Male', title: 'Male', icon: '♂️' },
+        { id: 'Female', title: 'Female', icon: '♀️' },
+        { id: 'Couple', title: 'Couple', icon: '💑' },
+        { id: 'Japanese Style', title: 'Japanese Style', icon: '🎌' },
+        { id: 'Ancient Style', title: 'Ancient Style', icon: '🏛️' },
+        { id: 'Small Animal', title: 'Small Animal', icon: '🐱' },
+        { id: 'Horizontal', title: 'Horizontal', icon: '↔️' },
+        { id: 'Vertical', title: 'Vertical', icon: '↕️' }
+      ]
+    },
+    {
+      id: 'preferences',
+      title: 'Other Preferences',
+      multiSelect: true,
+      options: [
+        { id: 'Accept Text Design', title: 'Accept Text Design', icon: '📝' },
+        { id: 'Not Based on Template', title: 'Not Based on Template', icon: '🆕' }
+      ]
+    }
   ];
 
-  const contentCategories = [
-    'Q-Version', 'Straight', 'Male', 'Female',
-    'Couple', 'Japanese Style', 'Ancient Style', 'Small Animal',
-    'Horizontal', 'Vertical'
+  // Price/Time filter sections
+  const priceTimeFilterSections: FilterSection[] = [
+    {
+      id: 'priceRange',
+      title: 'Price Range',
+      multiSelect: false,
+      options: [
+        { id: 'All', title: 'All Prices' },
+        { id: 'Under50', title: 'Under $50', icon: '💰' },
+        { id: '50-100', title: '$50 - $100', icon: '💰' },
+        { id: '100-300', title: '$100 - $300', icon: '💰' },
+        { id: '300-500', title: '$300 - $500', icon: '💰' },
+        { id: 'Over500', title: 'Over $500', icon: '💰' }
+      ]
+    },
+    {
+      id: 'timeRange',
+      title: 'Delivery Time',
+      multiSelect: false,
+      options: [
+        { id: 'All', title: 'All Times' },
+        { id: '24H', title: '24 Hours Express', icon: '⚡' },
+        { id: '3Days', title: 'Within 3 Days', icon: '📅' },
+        { id: '1Week', title: 'Within 1 Week', icon: '📅' },
+        { id: '2Weeks', title: 'Within 2 Weeks', icon: '📅' },
+        { id: 'Custom', title: 'Custom Timeline', icon: '📅' }
+      ]
+    }
   ];
 
-  const otherPreferences = [
-    'Accept Text Design', 'Not Based on Template'
-  ];
+  // 🎯 NEW: Search functionality
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    console.log(`Searching for: ${query} in ${activeTab}`);
+    // Here you would implement the actual search logic
+    // Filter the gallery items or projects based on the search query
+  };
 
-  const toggleCategorySelection = (category) => {
-    if (category === 'All') {
-      setSelectedCategories(['All']);
-    } else {
-      let newSelection = selectedCategories.filter(cat => cat !== 'All');
-      if (newSelection.includes(category)) {
-        newSelection = newSelection.filter(cat => cat !== category);
-      } else {
-        newSelection.push(category);
-      }
-      
-      if (newSelection.length === 0) {
-        newSelection = ['All'];
-      }
-      
-      setSelectedCategories(newSelection);
+  const handleSearchResultPress = (result: any) => {
+    console.log('Search result pressed:', result);
+    // Navigate to the appropriate detail page based on result type
+    if (result.type === 'gallery') {
+      router.push({
+        pathname: '/gallery-detail',
+        params: {
+          galleryId: result.id,
+          title: result.title,
+          // ... other params
+        }
+      });
+    } else if (result.type === 'artist') {
+      router.push({
+        pathname: '/artist-detail',
+        params: {
+          artistId: result.id,
+          artistName: result.title,
+          // ... other params
+        }
+      });
     }
   };
 
-  const renderGalleryItem = (item) => (
-    <TouchableOpacity 
-      key={item.id} 
-      style={styles.galleryItem}
-      onPress={() => {
-        router.push({
-          pathname: '/gallery-detail',
-          params: { 
-            galleryId: item.id,
-            title: item.title,
-            price: item.price,
-            artistName: item.artistName,
-            artistAvatar: item.artistAvatar,
-            image: item.image,
-            sold: item.sold,
-            category: item.category,
-            isExpress: item.isExpress
-          }
-        });
-      }}
-    >
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.image }} style={styles.galleryImage} />
-        {item.isExpress && (
-          <View style={styles.expressTag}>
-            <Text style={styles.expressText}>24H</Text>
-          </View>
-        )}
-        <View style={styles.artistInfo}>
-          <Image source={{ uri: item.artistAvatar }} style={styles.artistAvatar} />
-          <Text style={styles.artistName}>{item.artistName}</Text>
-        </View>
-      </View>
-      <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
-      <View style={styles.priceInfo}>
-        <Text style={styles.price}>${item.price}</Text>
-        <Text style={styles.soldCount}>Sold {item.sold}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderProjectItem = (item: any) => (
-    <TouchableOpacity key={item.id} style={styles.projectCard}>
-      <View style={styles.projectHeader}>
-        <View style={styles.projectInfo}>
-          <Text style={styles.projectTitle}>{item.title}</Text>
-          <Text style={styles.projectDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-          
-          {/* Tags */}
-          {item.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {item.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-          
-          <View style={styles.projectDetails}>
-            <Text style={styles.budget}>{item.budget}</Text>
-            <Text style={styles.deadline}>{item.deadline} Deadline</Text>
-          </View>
-        </View>
+  // Filter handlers
+  const handleFilterChange = (sectionId: string, optionId: string, isSelected: boolean) => {
+    setSelectedFilters(prev => {
+      const newFilters = { ...prev };
+      
+      if (sectionId === 'categories' && optionId === 'All') {
+        newFilters[sectionId] = isSelected ? ['All'] : [];
+      } else if (sectionId === 'priceRange' || sectionId === 'timeRange') {
+        // Single select for price and time
+        newFilters[sectionId] = isSelected ? [optionId] : ['All'];
+      } else {
+        if (!newFilters[sectionId]) newFilters[sectionId] = [];
         
-        <View style={styles.projectImageContainer}>
-          <Image source={{ uri: item.image }} style={styles.projectImage} />
-          <View style={styles.projectActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionIcon}>📋</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+        if (isSelected) {
+          // Remove 'All' if selecting specific category
+          newFilters[sectionId] = newFilters[sectionId].filter(id => id !== 'All');
+          newFilters[sectionId].push(optionId);
+        } else {
+          newFilters[sectionId] = newFilters[sectionId].filter(id => id !== optionId);
+          if (newFilters[sectionId].length === 0 && sectionId === 'categories') {
+            newFilters[sectionId] = ['All'];
+          }
+        }
+      }
+      
+      return newFilters;
+    });
+  };
+
+  const handleFilterReset = () => {
+    setSelectedFilters({
+      categories: ['All'],
+      contentStyle: [],
+      preferences: [],
+      priceRange: ['All'],
+      timeRange: ['All']
+    });
+  };
+
+  const handleFilterApply = () => {
+    setShowCategoryFilter(false);
+    setShowPriceTimeFilter(false);
+    // Apply filter logic here
+  };
+
+  const handlePriceTimeFilterApply = () => {
+    setShowPriceTimeFilter(false);
+    // Apply price/time filter logic here
+  };
+
+  // Filter gallery items based on selected filters, category, and search query
+  const getFilteredGalleryItems = () => {
+    let filtered = allGalleryItems;
+
+    // 🎯 NEW: Apply search filter first
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.category.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by category tab
+    if (activeCategory === 'Recommended') {
+      filtered = filtered.filter(item => item.contentCategory === 'Recommended');
+    } else if (activeCategory === 'New') {
+      filtered = filtered.filter(item => item.contentCategory === 'New');
+    } else if (activeCategory === 'Pre-order') {
+      filtered = filtered.filter(item => item.contentCategory === 'Pre-order');
+    } else if (activeCategory === 'Following') {
+      filtered = filtered.filter(item => item.contentCategory === 'Following');
+    }
+
+    // Filter by 24H Express
+    if (is24HourExpress) {
+      filtered = filtered.filter(item => item.isExpress);
+    }
+
+    // Filter by categories
+    const selectedCategories = selectedFilters.categories || ['All'];
+    if (!selectedCategories.includes('All')) {
+      filtered = filtered.filter(item => 
+        selectedCategories.some(cat => item.category.includes(cat))
+      );
+    }
+
+    // Filter by price range
+    const selectedPriceRange = selectedFilters.priceRange?.[0] || 'All';
+    if (selectedPriceRange !== 'All') {
+      filtered = filtered.filter(item => {
+        const price = item.price;
+        switch (selectedPriceRange) {
+          case 'Under50': return price < 50;
+          case '50-100': return price >= 50 && price <= 100;
+          case '100-300': return price >= 100 && price <= 300;
+          case '300-500': return price >= 300 && price <= 500;
+          case 'Over500': return price > 500;
+          default: return true;
+        }
+      });
+    }
+
+    // Filter by delivery time
+    const selectedTimeRange = selectedFilters.timeRange?.[0] || 'All';
+    if (selectedTimeRange === '24H') {
+      filtered = filtered.filter(item => item.isExpress);
+    }
+
+    return filtered;
+  };
+
+  // 🎯 NEW: Filter projects based on search query
+  const getFilteredProjectItems = () => {
+    let filtered = projectItems;
+
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.budget.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
 
   // Gallery Page Content
   const GalleryContent = () => (
     <View style={styles.pageContent}>
-      {/* Search Bar */}
+      {/* Search Bar - 🎯 UPDATED: Now clickable */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+        <TouchableOpacity 
+          style={styles.searchBar}
+          onPress={() => setShowSearch(true)}
+        >
           <Text style={styles.searchPlaceholder}>🔍 Search</Text>
-        </View>
+        </TouchableOpacity>
       </View>
+
+      {/* Search Results Header - 🎯 NEW */}
+      {searchQuery.trim() && (
+        <View style={styles.searchResultsHeader}>
+          <Text style={styles.searchResultsText}>
+            Results for "{searchQuery}" ({getFilteredGalleryItems().length})
+          </Text>
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Text style={styles.clearSearchText}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Category Tabs */}
       <View style={styles.categoryContainer}>
@@ -363,7 +562,7 @@ const Homepage = () => {
       {/* Filter Options */}
       <View style={styles.filterContainer}>
         <TouchableOpacity
-          style={[styles.filterButton, is24HourExpress && styles.activeFilter]}
+          style={[styles.filterButton, is24HourExpress && styles.activeFilterButton]}
           onPress={() => setIs24HourExpress(!is24HourExpress)}
         >
           <Text style={styles.filterIcon}>⚡</Text>
@@ -373,50 +572,109 @@ const Homepage = () => {
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.filterButton}
+          style={[
+            styles.filterButton,
+            selectedFilters.categories && !selectedFilters.categories.includes('All') && styles.activeFilterButton
+          ]}
           onPress={() => setShowCategoryFilter(true)}
         >
-          <Text style={styles.filterText}>Categories ▼</Text>
+          <Text style={[
+            styles.filterText,
+            selectedFilters.categories && !selectedFilters.categories.includes('All') && styles.activeFilterText
+          ]}>
+            Categories ▼
+          </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterText}>Price/Time ▼</Text>
+        <TouchableOpacity 
+          style={[
+            styles.filterButton,
+            (selectedFilters.priceRange?.[0] !== 'All' || selectedFilters.timeRange?.[0] !== 'All') && styles.activeFilterButton
+          ]}
+          onPress={() => setShowPriceTimeFilter(true)}
+        >
+          <Text style={[
+            styles.filterText,
+            (selectedFilters.priceRange?.[0] !== 'All' || selectedFilters.timeRange?.[0] !== 'All') && styles.activeFilterText
+          ]}>
+            Price/Time ▼
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Gallery Grid */}
-      <View style={styles.galleryGrid}>
-        {galleryItems.map((item) => renderGalleryItem(item))}
+      <View style={GlobalStyles.gridContainer}>
+        {getFilteredGalleryItems().map((item) => (
+          <GalleryCard
+            key={item.id}
+            id={item.id}
+            title={item.title}
+            price={item.price}
+            sold={item.sold}
+            artistName={item.artistName}
+            artistAvatar={item.artistAvatar}
+            image={item.image}
+            isExpress={item.isExpress}
+            category={item.category}
+            style={GlobalStyles.gridItem}
+          />
+        ))}
       </View>
+
+      {/* 🎯 NEW: Empty search results */}
+      {searchQuery.trim() && getFilteredGalleryItems().length === 0 && (
+        <View style={styles.emptySearchResults}>
+          <Text style={styles.emptySearchIcon}>🔍</Text>
+          <Text style={styles.emptySearchTitle}>No galleries found</Text>
+          <Text style={styles.emptySearchDescription}>
+            Try adjusting your search terms or browse categories
+          </Text>
+        </View>
+      )}
     </View>
   );
 
   // Projects Page Content
   const ProjectsContent = () => (
     <View style={styles.pageContent}>
-      {/* Search Bar */}
+      {/* Search Bar - 🎯 UPDATED: Now clickable */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
+        <TouchableOpacity 
+          style={styles.searchBar}
+          onPress={() => setShowSearch(true)}
+        >
           <Text style={styles.searchIcon}>🔍</Text>
           <Text style={styles.searchPlaceholder}>Search</Text>
-        </View>
+        </TouchableOpacity>
       </View>
+
+      {/* Search Results Header - 🎯 NEW */}
+      {searchQuery.trim() && (
+        <View style={styles.searchResultsHeader}>
+          <Text style={styles.searchResultsText}>
+            Results for "{searchQuery}" ({getFilteredProjectItems().length})
+          </Text>
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Text style={styles.clearSearchText}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <TouchableOpacity style={styles.filterButton}>
           <Text style={styles.filterIcon}>🏢</Text>
-          <Text style={styles.filterButtonText}>Verified Only</Text>
+          <Text style={styles.filterText}>Verified Only</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.filterButton}>
           <Text style={styles.filterIcon}>✅</Text>
-          <Text style={styles.filterButtonText}>Unclaimed Only</Text>
+          <Text style={styles.filterText}>Unclaimed Only</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.filterButton}>
           <Text style={styles.filterIcon}>👤</Text>
-          <Text style={styles.filterButtonText}>Character</Text>
+          <Text style={styles.filterText}>Character</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.filterButton}>
@@ -426,116 +684,39 @@ const Homepage = () => {
 
       {/* Projects List */}
       <View style={styles.projectsList}>
-        {projectItems.map((item) => renderProjectItem(item))}
+        {getFilteredProjectItems().map((item) => (
+          <ProjectCard
+            key={item.id}
+            id={item.id}
+            title={item.title}
+            description={item.description}
+            budget={item.budget}
+            deadline={item.deadline}
+            clientName={item.clientName}
+            clientAvatar={item.clientAvatar}
+            isVerified={item.isVerified}
+            isHighQuality={item.isHighQuality}
+            image={item.image}
+            tags={item.tags}
+          />
+        ))}
       </View>
+
+      {/* 🎯 NEW: Empty search results */}
+      {searchQuery.trim() && getFilteredProjectItems().length === 0 && (
+        <View style={styles.emptySearchResults}>
+          <Text style={styles.emptySearchIcon}>🔍</Text>
+          <Text style={styles.emptySearchTitle}>No projects found</Text>
+          <Text style={styles.emptySearchDescription}>
+            Try adjusting your search terms or browse categories
+          </Text>
+        </View>
+      )}
     </View>
   );
 
-  const CategoryFilterModal = () => (
-    <Modal
-      visible={showCategoryFilter}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowCategoryFilter(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* All Categories Section */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>All Categories</Text>
-              <View style={styles.filterGrid}>
-                {allCategories.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    style={[
-                      styles.filterTag,
-                      selectedCategories.includes(category) && styles.selectedFilterTag
-                    ]}
-                    onPress={() => toggleCategorySelection(category)}
-                  >
-                    <Text style={[
-                      styles.filterTagText,
-                      selectedCategories.includes(category) && styles.selectedFilterTagText
-                    ]}>
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Content Style Section */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Content Style</Text>
-              <View style={styles.filterGrid}>
-                {contentCategories.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    style={[
-                      styles.filterTag,
-                      selectedCategories.includes(category) && styles.selectedFilterTag
-                    ]}
-                    onPress={() => toggleCategorySelection(category)}
-                  >
-                    <Text style={[
-                      styles.filterTagText,
-                      selectedCategories.includes(category) && styles.selectedFilterTagText
-                    ]}>
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Other Preferences Section */}
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Other Preferences</Text>
-              <View style={styles.filterGrid}>
-                {otherPreferences.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    style={[
-                      styles.filterTag,
-                      selectedCategories.includes(category) && styles.selectedFilterTag
-                    ]}
-                    onPress={() => toggleCategorySelection(category)}
-                  >
-                    <Text style={[
-                      styles.filterTagText,
-                      selectedCategories.includes(category) && styles.selectedFilterTagText
-                    ]}>
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* Bottom Buttons */}
-          <View style={styles.modalButtons}>
-            <TouchableOpacity 
-              style={styles.resetButton}
-              onPress={() => setSelectedCategories(['All'])}
-            >
-              <Text style={styles.resetButtonText}>Reset</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.confirmButton}
-              onPress={() => setShowCategoryFilter(false)}
-            >
-              <Text style={styles.confirmButtonText}>Confirm</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={AppStyles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -557,9 +738,6 @@ const Homepage = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.searchButton}>
-            <Text style={styles.searchIcon}>🔍</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.addButton}
             onPress={() => router.push('/post-project')}
@@ -575,123 +753,98 @@ const Homepage = () => {
           {/* Gallery Page */}
           <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
             <GalleryContent />
-            <View style={styles.bottomPadding} />
+            <View style={GlobalStyles.bottomPadding} />
           </ScrollView>
 
           {/* Projects Page */}
           <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
             <ProjectsContent />
-            <View style={styles.bottomPadding} />
+            <View style={GlobalStyles.bottomPadding} />
           </ScrollView>
         </Animated.View>
       </PanGestureHandler>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/homepage')}
-        >
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/artists')}
-        >
-          <Text style={styles.navIcon}>🎨</Text>
-          <Text style={styles.navText}>Artists</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/messages')}
-        >
-          <Text style={styles.navIcon}>💬</Text>
-          <Text style={styles.navText}>Messages</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>1</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/profile')}
-        >
-          <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navText}>Profile</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>2</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+      <BottomNavigation activeTab="home" />
+
+      {/* 🎯 NEW: Search Component */}
+      <SearchComponent
+        visible={showSearch}
+        onClose={() => setShowSearch(false)}
+        searchType={activeTab === 'Gallery' ? 'gallery' : 'projects'}
+        onSearch={handleSearch}
+        onResultPress={handleSearchResultPress}
+      />
 
       {/* Category Filter Modal */}
-      <CategoryFilterModal />
-    </SafeAreaView>
+      <FilterModal
+        visible={showCategoryFilter}
+        title="Categories"
+        sections={filterSections}
+        selectedFilters={selectedFilters}
+        onFilterChange={handleFilterChange}
+        onReset={handleFilterReset}
+        onApply={handleFilterApply}
+        onClose={() => setShowCategoryFilter(false)}
+      />
+
+      {/* Price/Time Filter Modal */}
+      <FilterModal
+        visible={showPriceTimeFilter}
+        title="Price & Time"
+        sections={priceTimeFilterSections}
+        selectedFilters={selectedFilters}
+        onFilterChange={handleFilterChange}
+        onReset={handleFilterReset}
+        onApply={handlePriceTimeFilterApply}
+        onClose={() => setShowPriceTimeFilter(false)}
+      />
+    </View>
   );
 };
 
+// Simplified styles - only keeping unique ones
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
+    ...Layout.rowSpaceBetween,
+    ...Layout.paddingHorizontal,
+    ...AppStyles.header,
+    paddingBottom: Layout.spacing.lg,
   },
   headerLeft: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
   },
   tabButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    marginRight: Layout.spacing.sm,
   },
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#00A8FF',
+    ...Layout.borderBottom,
+    borderBottomColor: Colors.primary,
   },
   tabText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#888',
+    ...Typography.h5,
+    color: Colors.textMuted,
   },
   activeTabText: {
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   headerRight: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-  },
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  searchIcon: {
-    fontSize: 18,
   },
   addButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00A8FF',
+    borderRadius: Layout.radius.xl,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addIcon: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    ...Typography.h4,
+    color: Colors.text,
   },
   // Swipe container styles
   swipeContainer: {
@@ -707,363 +860,125 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    ...Layout.paddingHorizontal,
+    marginBottom: Layout.spacing.xl,
   },
   searchBar: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.xxl,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: Layout.spacing.md,
   },
   searchPlaceholder: {
-    color: '#666',
-    fontSize: 16,
+    ...Typography.body,
+    color: Colors.textMuted,
   },
-  categoryContainer: {
-    paddingLeft: 24,
-    marginBottom: 20,
-  },
-  categoryTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginRight: 16,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeCategoryTab: {
-    borderBottomColor: '#00A8FF',
-  },
-  categoryText: {
-    fontSize: 16,
-    color: '#888',
-  },
-  activeCategoryText: {
-    color: '#00A8FF',
-    fontWeight: 'bold',
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 20,
-  },
-  filterButton: {
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activeFilter: {
-    backgroundColor: '#00A8FF',
-  },
-  filterIcon: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  filterText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  filterButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  activeFilterText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  galleryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-  },
-  galleryItem: {
-    width: '48%',
-    marginHorizontal: '1%',
-    marginBottom: 20,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  imageContainer: {
-    position: 'relative',
-  },
-  galleryImage: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#333',
-  },
-  expressTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  expressText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  artistInfo: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  artistAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 6,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-  },
-  artistName: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  itemTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    padding: 12,
-    paddingBottom: 8,
-    lineHeight: 18,
-  },
-  priceInfo: {
+  
+  // 🎯 NEW: Search results header
+  searchResultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
   },
-  price: {
-    color: '#FF6B35',
-    fontSize: 16,
-    fontWeight: 'bold',
+  searchResultsText: {
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
   },
-  soldCount: {
-    color: '#888',
-    fontSize: 12,
+  clearSearchText: {
+    ...Typography.bodySmall,
+    color: Colors.primary,
   },
-  // Projects styles
-  projectsList: {
-    paddingHorizontal: 24,
+
+  // 🎯 NEW: Empty search results
+  emptySearchResults: {
+    alignItems: 'center',
+    paddingVertical: Layout.spacing.xxxl,
+    paddingHorizontal: Layout.spacing.xl,
   },
-  projectCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+  emptySearchIcon: {
+    fontSize: 48,
+    marginBottom: Layout.spacing.lg,
   },
-  projectHeader: {
-    flexDirection: 'row',
+  emptySearchTitle: {
+    ...Typography.h5,
+    color: Colors.text,
+    marginBottom: Layout.spacing.md,
+    textAlign: 'center',
   },
-  projectInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  projectTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  projectDescription: {
-    fontSize: 14,
-    color: '#CCCCCC',
+  emptySearchDescription: {
+    ...Typography.body,
+    color: Colors.textMuted,
+    textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 12,
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
+
+  categoryContainer: {
+    paddingLeft: Layout.spacing.xl,
+    marginBottom: Layout.spacing.xl,
+    marginTop: Layout.spacing.sm,
   },
-  tag: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 4,
+  categoryTab: {
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
+    marginRight: Layout.spacing.lg,
+    ...Layout.borderBottom,
+    borderBottomColor: 'transparent',
   },
-  tagText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+  activeCategoryTab: {
+    borderBottomColor: Colors.primary,
+  },
+  categoryText: {
+    ...Typography.body,
+    color: Colors.textMuted,
+  },
+  activeCategoryText: {
+    ...Typography.body,
+    color: Colors.primary,
     fontWeight: 'bold',
   },
-  projectDetails: {
-    flexDirection: 'column',
-  },
-  budget: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  deadline: {
+  filterIcon: {
     fontSize: 14,
-    color: '#888',
+    marginRight: Layout.spacing.xs,
   },
-  projectImageContainer: {
-    position: 'relative',
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+    justifyContent: 'space-between',
   },
-  projectImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-  },
-  projectActions: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+  filterButton: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: Layout.spacing.xs,
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  actionIcon: {
-    fontSize: 16,
+  activeFilterButton: {
+    backgroundColor: Colors.primary,
   },
-  bottomPadding: {
-    height: 100,
+  filterText: {
+    ...Typography.bodySmall,
+    color: Colors.text,
+    textAlign: 'center',
   },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 12, 
-    paddingHorizontal: 16, 
-    borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8, 
-    position: 'relative',
-  },
-  navIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  navText: {
-    fontSize: 12,
-    color: '#888',
-  },
-  activeNavText: {
-    color: '#00A8FF',
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 20,
-    backgroundColor: '#FF4444',
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
+  activeFilterText: {
+    color: Colors.text,
     fontWeight: 'bold',
   },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#0A0A0A',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    paddingTop: 20,
-  },
-  filterSection: {
-    marginBottom: 30,
-    paddingHorizontal: 20,
-  },
-  filterSectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  filterGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  filterTag: {
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  selectedFilterTag: {
-    backgroundColor: '#00A8FF',
-    borderColor: '#00A8FF',
-  },
-  filterTagText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  selectedFilterTagText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-  },
-  resetButton: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  confirmButton: {
-    flex: 2,
-    backgroundColor: '#00A8FF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+  projectsList: {
+    ...Layout.paddingHorizontal,
   },
 });
 

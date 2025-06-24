@@ -1,8 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
+import LoadingState from './components/common/LoadingState';
+import { Colors } from './components/styles/Colors';
 import LoginPage from './login';
+
+// Unified container style
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0,
+  },
+};
 
 export default function Index() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -14,19 +25,19 @@ export default function Index() {
 
   const checkAuthStatus = async () => {
     try {
-      // 检查用户是否已登录
+      // Check if user is already logged in
       const userToken = await AsyncStorage.getItem('userToken');
       const loginStatus = await AsyncStorage.getItem('isLoggedIn');
       
       if (userToken && loginStatus === 'true') {
-        // 用户已登录，直接跳转到主页
+        // User is logged in, redirect to homepage
         console.log('User already logged in, redirecting to homepage...');
         setIsLoggedIn(true);
         router.replace('/homepage');
         return;
       }
       
-      // 用户未登录，显示登录页面
+      // User is not logged in, show login page
       console.log('User not logged in, showing login page...');
       setIsLoggedIn(false);
       
@@ -38,40 +49,32 @@ export default function Index() {
     }
   };
 
-  // 显示加载界面
+  // Show loading screen while checking authentication
   if (isCheckingAuth) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#00A8FF" />
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={AppStyles.container}>
+        <LoadingState 
+          text="Checking authentication..." 
+          color={Colors.primary}
+          size="large"
+        />
       </View>
     );
   }
 
-  // 如果用户已登录但还没跳转完成，显示加载界面
+  // Show loading screen if user is logged in but redirect hasn't completed
   if (isLoggedIn) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#00A8FF" />
-        <Text style={styles.loadingText}>Redirecting...</Text>
+      <View style={AppStyles.container}>
+        <LoadingState 
+          text="Redirecting to homepage..." 
+          color={Colors.primary}
+          size="large"
+        />
       </View>
     );
   }
 
-  // 显示登录页面
+  // Show login page
   return <LoginPage />;
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginTop: 16,
-  },
-});

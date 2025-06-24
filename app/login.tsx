@@ -1,18 +1,40 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors } from './components/styles/Colors';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
+// Unified container style
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0,
+  },
+};
+
+interface UserData {
+  token: string;
+  userInfo: {
+    id: string;
+    email: string;
+    username: string;
+    avatar: string;
+    isArtist: boolean;
+    joinDate: string;
+  };
+}
 
 const LoginPage = () => {
-  const [loginMode, setLoginMode] = useState('email'); // 'email' or 'username'
+  const [loginMode, setLoginMode] = useState<'email' | 'username'>('email');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
-  const [countryCode, setCountryCode] = useState('+86');
   const [showPassword, setShowPassword] = useState(false);
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,6 +44,13 @@ const LoginPage = () => {
       return () => clearTimeout(timer);
     }
   }, [countdown]);
+
+  // Auto dismiss keyboard when verification code is complete
+  useEffect(() => {
+    if (verificationCode.length === 6) {
+      Keyboard.dismiss();
+    }
+  }, [verificationCode]);
 
   const sendVerificationCode = async () => {
     if (email && countdown === 0) {
@@ -40,9 +69,9 @@ const LoginPage = () => {
     }
   };
 
-  const saveUserData = async (userData) => {
+  const saveUserData = async (userData: UserData) => {
     try {
-      // 保存用户token和基本信息
+      // Save user token and basic info
       await AsyncStorage.setItem('userToken', userData.token);
       await AsyncStorage.setItem('userInfo', JSON.stringify(userData.userInfo));
       await AsyncStorage.setItem('isLoggedIn', 'true');
@@ -76,25 +105,25 @@ const LoginPage = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // 模拟登录成功返回的数据
-      const mockUserData = {
+      // Mock successful login response data
+      const mockUserData: UserData = {
         token: 'mock_jwt_token_12345',
         userInfo: {
           id: loginMode === 'email' ? 'user_email_123' : 'user_username_456',
           email: loginMode === 'email' ? email : `${username}@example.com`,
           username: loginMode === 'email' ? email.split('@')[0] : username,
           avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face',
-          isArtist: Math.random() > 0.5, // 随机决定是否为画师
+          isArtist: Math.random() > 0.5, // Randomly decide if user is an artist
           joinDate: new Date().toISOString(),
         }
       };
 
-      // 保存用户数据
+      // Save user data
       await saveUserData(mockUserData);
       
       console.log('Login successful:', mockUserData);
       
-      // 跳转到主页
+      // Navigate to homepage
       router.replace('/homepage');
       
     } catch (err) {
@@ -116,8 +145,111 @@ const LoginPage = () => {
     // router.push('/forgot-password');
   };
 
+  // Render info box
+  const renderInfoBox = () => (
+    <View style={styles.infoBox}>
+      <Text style={styles.infoText}>
+        {loginMode === 'email' 
+          ? '💡 New users: Verification will create your account automatically'
+          : '🔐 Use any of your registered credentials to sign in'
+        }
+      </Text>
+    </View>
+  );
+
+  // Render email login fields
+  const renderEmailLogin = () => (
+    <>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter your email"
+        placeholderTextColor={Colors.textMuted}
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      
+      {/* Terms Agreement */}
+      <View style={styles.agreementContainer}>
+        <Text style={styles.agreementText}>
+          By continuing, you agree to our{' '}
+          <Text style={styles.linkText}>Terms of Service</Text>
+          {' '}and{' '}
+          <Text style={styles.linkText}>Privacy Policy</Text>
+        </Text>
+      </View>
+
+      {/* Verification code input */}
+      <View style={styles.codeContainer}>
+        <TextInput
+          style={[styles.input, styles.codeInput]}
+          placeholder="Enter verification code"
+          placeholderTextColor={Colors.textMuted}
+          value={verificationCode}
+          onChangeText={setVerificationCode}
+          keyboardType="numeric"
+          maxLength={6}
+          returnKeyType="done"
+          onSubmitEditing={() => Keyboard.dismiss()}
+        />
+        <TouchableOpacity
+          style={[styles.codeButton, (countdown > 0 || !email || isLoading) && styles.disabledButton]}
+          onPress={sendVerificationCode}
+          disabled={countdown > 0 || !email || isLoading}
+        >
+          <Text style={[styles.codeButtonText, (countdown > 0 || !email || isLoading) && styles.disabledText]}>
+            {isLoading ? 'Sending...' : (countdown > 0 ? `${countdown}s` : 'Send Code')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  // Render username login fields
+  const renderUsernameLogin = () => (
+    <>
+      <TextInput
+        style={styles.input}
+        placeholder="Username / Phone / Email"
+        placeholderTextColor={Colors.textMuted}
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+      />
+
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={[styles.input, styles.passwordInput]}
+          placeholder="Enter password"
+          placeholderTextColor={Colors.textMuted}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity 
+          style={styles.eyeButton}
+          onPress={() => setShowPassword(!showPassword)}
+        >
+          <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '🙈'}</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  // Render error message
+  const renderError = () => {
+    if (!error) return null;
+    
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>⚠️ {error}</Text>
+      </View>
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={AppStyles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>
           {loginMode === 'email' ? 'Email Verification' : 'Account Login'}
@@ -129,97 +261,16 @@ const LoginPage = () => {
           }
         </Text>
 
-        {/* Additional Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            {loginMode === 'email' 
-              ? '💡 New users: Verification will create your account automatically'
-              : '🔐 Use any of your registered credentials to sign in'
-            }
-          </Text>
-        </View>
+        {/* Info Box */}
+        {renderInfoBox()}
 
-        {/* Input fields */}
-        {loginMode === 'email' ? (
-          <>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor="#666"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            
-            {/* Terms Agreement */}
-            <View style={styles.agreementContainer}>
-              <Text style={styles.agreementText}>
-                By continuing, you agree to our{' '}
-                <Text style={styles.linkText}>Terms of Service</Text>
-                {' '}and{' '}
-                <Text style={styles.linkText}>Privacy Policy</Text>
-              </Text>
-            </View>
-          </>
-        ) : (
-          <TextInput
-            style={styles.input}
-            placeholder="Username / Phone / Email"
-            placeholderTextColor="#666"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-          />
-        )}
-
-        {loginMode === 'username' ? (
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="Enter password"
-              placeholderTextColor="#666"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity 
-              style={styles.eyeButton}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '🙈'}</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.codeContainer}>
-            <TextInput
-              style={[styles.input, styles.codeInput]}
-              placeholder="Enter verification code"
-              placeholderTextColor="#666"
-              value={verificationCode}
-              onChangeText={setVerificationCode}
-              keyboardType="numeric"
-              maxLength={6}
-            />
-            <TouchableOpacity
-              style={[styles.codeButton, (countdown > 0 || !email || isLoading) && styles.disabledButton]}
-              onPress={sendVerificationCode}
-              disabled={countdown > 0 || !email || isLoading}
-            >
-              <Text style={[styles.codeButtonText, (countdown > 0 || !email || isLoading) && styles.disabledText]}>
-                {isLoading ? 'Sending...' : (countdown > 0 ? `${countdown}s` : 'Send Code')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Input Fields */}
+        {loginMode === 'email' ? renderEmailLogin() : renderUsernameLogin()}
 
         {/* Error Message */}
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
-          </View>
-        ) : null}
+        {renderError()}
 
+        {/* Login Button */}
         <TouchableOpacity 
           style={[styles.loginButton, isLoading && styles.disabledButton]} 
           onPress={handleLogin}
@@ -247,59 +298,53 @@ const LoginPage = () => {
           </TouchableOpacity>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
   content: {
     flex: 1,
-    padding: 24,
+    padding: Layout.spacing.xl,
     paddingTop: 80,
     justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h2,
+    color: Colors.text,
+    marginBottom: Layout.spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 16,
+    ...Typography.bodyMuted,
+    marginBottom: Layout.spacing.lg,
     lineHeight: 20,
   },
   infoBox: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 24,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.sm,
+    padding: Layout.spacing.md,
+    marginBottom: Layout.spacing.xl,
     borderLeftWidth: 3,
-    borderLeftColor: '#00A8FF',
+    borderLeftColor: Colors.primary,
   },
   infoText: {
-    fontSize: 12,
-    color: '#AAA',
+    ...Typography.caption,
+    color: Colors.textSecondary,
     lineHeight: 16,
   },
   input: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    ...Typography.body,
+    color: Colors.text,
+    marginBottom: Layout.spacing.lg,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.border,
   },
   passwordContainer: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   passwordInput: {
     paddingRight: 50,
@@ -307,8 +352,8 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     position: 'absolute',
-    right: 16,
-    top: 16,
+    right: Layout.spacing.lg,
+    top: Layout.spacing.lg,
     width: 24,
     height: 24,
     justifyContent: 'center',
@@ -318,84 +363,82 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   agreementContainer: {
-    marginBottom: 24,
+    marginBottom: Layout.spacing.xl,
   },
   agreementText: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
+    color: Colors.textMuted,
     lineHeight: 18,
   },
   linkText: {
-    color: '#00A8FF',
+    color: Colors.primary,
   },
   codeContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
+    ...Layout.row,
+    marginBottom: Layout.spacing.lg,
   },
   codeInput: {
     flex: 1,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
     marginBottom: 0,
   },
   codeButton: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.lg,
+    borderRadius: Layout.radius.md,
     justifyContent: 'center',
     minWidth: 100,
   },
   disabledButton: {
-    backgroundColor: '#333',
+    backgroundColor: Colors.card,
   },
   codeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    ...Typography.buttonSmall,
+    color: Colors.text,
     textAlign: 'center',
   },
   disabledText: {
-    color: '#666',
+    color: Colors.textDisabled,
   },
   loginButton: {
-    backgroundColor: '#00A8FF',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: Layout.radius.md,
+    paddingVertical: Layout.spacing.lg,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
+    ...Typography.button,
+    color: Colors.text,
   },
   switchButton: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Layout.spacing.md,
   },
   switchText: {
-    color: '#00A8FF',
-    fontSize: 16,
+    ...Typography.h6,
+    color: Colors.primary,
   },
   forgotButton: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: Layout.spacing.xxxl,
   },
   forgotText: {
-    color: '#888',
-    fontSize: 14,
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
   },
   errorContainer: {
     backgroundColor: '#2A1A1A',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: Layout.radius.sm,
+    padding: Layout.spacing.md,
+    marginBottom: Layout.spacing.lg,
     borderLeftWidth: 3,
-    borderLeftColor: '#FF4444',
+    borderLeftColor: Colors.error,
   },
   errorText: {
-    fontSize: 12,
-    color: '#FF6666',
+    ...Typography.caption,
+    color: Colors.errorLight,
     lineHeight: 16,
   },
 });

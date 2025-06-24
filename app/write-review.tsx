@@ -1,17 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+
+// Import your component library
+import { Colors } from './components/styles/Colors';
+import GlobalStyles from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
 
 const WriteReviewPage = () => {
   const params = useLocalSearchParams();
@@ -107,14 +112,14 @@ const WriteReviewPage = () => {
   };
 
   const getRatingColor = (rating) => {
-    if (rating <= 2) return '#FF5722';
-    if (rating === 3) return '#FF9800';
-    return '#4CAF50';
+    if (rating <= 2) return Colors.error;
+    if (rating === 3) return Colors.warning;
+    return Colors.success;
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <View style={GlobalStyles.container}>
+      {/* Header - 手动实现确保正确的 padding */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
@@ -201,7 +206,7 @@ const WriteReviewPage = () => {
             <TextInput
               style={styles.reviewInput}
               placeholder="Tell us about your experience with this artist. What did you like? Was the communication good? How was the final result?"
-              placeholderTextColor="#666"
+              placeholderTextColor={Colors.textDisabled}
               value={reviewText}
               onChangeText={setReviewText}
               multiline
@@ -227,7 +232,7 @@ const WriteReviewPage = () => {
             </Text>
           </View>
 
-          <View style={styles.bottomPadding} />
+          <View style={GlobalStyles.bottomPadding} />
         </ScrollView>
 
         {/* Bottom Submit Button */}
@@ -249,23 +254,19 @@ const WriteReviewPage = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
+  // Header - 与其他页面保持完全一致
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingTop: 50, // 🎯 关键！与其他页面一致的状态栏高度
+    paddingBottom: Layout.spacing.lg,
+    ...Layout.borderBottom,
   },
   backButton: {
     width: 40,
@@ -275,16 +276,15 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h5,
   },
   placeholder: {
     width: 40,
   },
+
   keyboardContainer: {
     flex: 1,
   },
@@ -294,172 +294,154 @@ const styles = StyleSheet.create({
 
   // Order Info
   orderInfo: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    padding: 16,
+    ...Layout.card,
+    ...Layout.marginHorizontal,
+    marginTop: Layout.spacing.xl,
   },
   orderTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.sm,
   },
   artistName: {
-    fontSize: 16,
-    color: '#00A8FF',
-    marginBottom: 4,
+    ...Typography.body,
+    color: Colors.primary,
+    marginBottom: Layout.spacing.xs,
   },
   orderId: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
 
   // Rating Section
   ratingSection: {
-    marginHorizontal: 20,
-    marginTop: 24,
+    ...Layout.marginHorizontal,
+    marginTop: Layout.spacing.xxl,
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h4,
+    marginBottom: Layout.spacing.sm,
   },
   sectionSubtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 24,
+    ...Typography.bodySmallMuted,
+    marginBottom: Layout.spacing.xxl,
     textAlign: 'center',
   },
   starsContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
+    ...Layout.row,
+    marginBottom: Layout.spacing.lg,
   },
   starButton: {
-    marginHorizontal: 8,
+    marginHorizontal: Layout.spacing.sm,
   },
   star: {
     fontSize: 40,
-    color: '#333',
+    color: Colors.border,
   },
   activeStar: {
-    color: '#FFD700',
+    color: Colors.rating,
   },
   ratingText: {
-    fontSize: 18,
+    ...Typography.bodyLarge,
     fontWeight: 'bold',
-    marginTop: 8,
+    marginTop: Layout.spacing.sm,
   },
 
   // Tags Section
   tagsSection: {
-    marginHorizontal: 20,
-    marginTop: 32,
+    ...Layout.marginHorizontal,
+    marginTop: Layout.spacing.xxxl,
   },
   tagsGrid: {
-    flexDirection: 'row',
+    ...Layout.row,
     flexWrap: 'wrap',
-    marginTop: 16,
+    marginTop: Layout.spacing.lg,
   },
   tagButton: {
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 12,
-    marginBottom: 12,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.radius.xl,
+    marginRight: Layout.spacing.md,
+    marginBottom: Layout.spacing.md,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.border,
   },
   selectedTagButton: {
-    backgroundColor: '#00A8FF',
-    borderColor: '#00A8FF',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   tagText: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
   },
   selectedTagText: {
-    color: '#FFFFFF',
     fontWeight: 'bold',
   },
 
   // Review Section
   reviewSection: {
-    marginHorizontal: 20,
-    marginTop: 32,
+    ...Layout.marginHorizontal,
+    marginTop: Layout.spacing.xxxl,
   },
   reviewInput: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginTop: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    color: Colors.text,
+    ...Typography.body,
+    marginTop: Layout.spacing.lg,
     minHeight: 120,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.border,
   },
   characterCount: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
     textAlign: 'right',
-    marginTop: 8,
+    marginTop: Layout.spacing.sm,
   },
 
   // Guidelines
   guidelines: {
-    marginHorizontal: 20,
-    marginTop: 32,
-    backgroundColor: '#1A2A1A',
-    borderRadius: 12,
-    padding: 16,
+    ...Layout.marginHorizontal,
+    marginTop: Layout.spacing.xxxl,
+    backgroundColor: Colors.artist,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: Colors.success,
   },
   guidelinesTitle: {
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 8,
+    color: Colors.success,
+    marginBottom: Layout.spacing.sm,
   },
   guidelinesText: {
-    fontSize: 14,
-    color: '#CCCCCC',
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
     lineHeight: 20,
-  },
-
-  bottomPadding: {
-    height: 100,
   },
 
   // Bottom Container
   bottomContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#0A0A0A',
-    borderTopWidth: 1,
-    borderTopColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.lg,
+    backgroundColor: Colors.background,
+    ...Layout.borderTop,
   },
   submitButton: {
-    backgroundColor: '#00A8FF',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    paddingVertical: Layout.spacing.lg,
+    borderRadius: Layout.radius.md,
     alignItems: 'center',
   },
   disabledSubmitButton: {
-    backgroundColor: '#333',
+    backgroundColor: Colors.border,
   },
   submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...Typography.button,
   },
   disabledSubmitButtonText: {
-    color: '#666',
+    color: Colors.textDisabled,
   },
 });
 

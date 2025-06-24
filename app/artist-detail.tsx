@@ -1,9 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Dimensions,
   Image,
-  SafeAreaView,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +20,28 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 
+// Import components
+import EmptyState from './components/common/EmptyState';
+import StatusBadge from './components/common/StatusBadge';
+
+// Import styles
+import { Colors } from './components/styles/Colors';
+import GlobalStyles from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
+// 统一的无留白容器样式
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0, // 全局移除顶部留白
+  },
+  header: {
+    paddingTop: 50, // 状态栏高度
+  },
+};
+
 const { width: screenWidth } = Dimensions.get('window');
 
 const ArtistDetailPage = () => {
@@ -28,10 +51,33 @@ const ArtistDetailPage = () => {
   const [activeTab, setActiveTab] = useState('Portfolio');
   const [isFollowed, setIsFollowed] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Animation values for page swiping
   const translateX = useSharedValue(0);
   const currentPage = useSharedValue(0); // 0 = Portfolio, 1 = Gallery, 2 = Reviews
+
+  // Mock user projects for invitation
+  const [userProjects] = useState([
+    {
+      id: 1,
+      title: 'Character Design Project',
+      description: 'Looking for anime-style character design with detailed background',
+      budget: '$200-500',
+      deadline: '2025-08-15',
+      status: 'active',
+      applicantCount: 5
+    },
+    {
+      id: 2,
+      title: 'Logo Design Commission',
+      description: 'Modern logo for tech startup company with brand guidelines',
+      budget: '$300-800',
+      deadline: '2025-07-31',
+      status: 'active',
+      applicantCount: 8
+    }
+  ]);
 
   // Mock artist data
   const artistData = {
@@ -43,12 +89,12 @@ const ArtistDetailPage = () => {
     rating: 5.0,
     badge: 'Premium Artist',
     bio: '•°°• I love you •°°•\n***I love you***',
-    hasInvitationCalendar: true,
-    invitationDate: 'June 18, 2025 21:00',
     hasPriceList: true,
     portfolioCount: 100,
     galleryCount: 4,
-    reviewCount: 49
+    reviewCount: 49,
+    isVerified: true,
+    isAvailable: true
   };
 
   // Handle tab switch
@@ -94,14 +140,25 @@ const ArtistDetailPage = () => {
     transform: [{ translateX: translateX.value }],
   }));
 
+  // Handle invite artist to specific project
+  const handleInviteToProject = (projectId: number) => {
+    console.log(`Inviting artist ${artistId} to project ${projectId}`);
+    setShowInviteModal(false);
+    
+    router.push({
+      pathname: '/project-detail',
+      params: {
+        projectId: projectId,
+      }
+    });
+  };
+
   // Mock portfolio data
   const portfolioItems = [
     'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
     'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop',
     'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop'
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop'
   ];
 
   // Mock price list data
@@ -119,24 +176,10 @@ const ArtistDetailPage = () => {
       price: '$152',
       description: 'Detailed character with complex background',
       image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=150&fit=crop'
-    },
-    {
-      id: 3,
-      title: 'Full Body Art',
-      price: '$352',
-      description: 'Complete character design with background',
-      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=150&fit=crop'
-    },
-    {
-      id: 4,
-      title: 'Premium Package',
-      price: '$1000',
-      description: 'Multiple variations with commercial rights',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=150&fit=crop'
     }
   ];
 
-  // Mock gallery items (只有当画师有橱窗时才显示)
+  // Mock gallery items
   const galleryItems = [
     {
       id: 1,
@@ -149,18 +192,6 @@ const ArtistDetailPage = () => {
       title: 'Character Design Set',
       price: 157,
       image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop'
-    },
-    {
-      id: 3,
-      title: 'Fantasy Portrait',
-      price: 234,
-      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop'
-    },
-    {
-      id: 4,
-      title: 'Chibi Style Art',
-      price: 67,
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop'
     }
   ];
 
@@ -173,14 +204,6 @@ const ArtistDetailPage = () => {
       comment: 'Amazing artwork! Very professional and delivered on time.',
       avatar: 'https://i.pravatar.cc/40?img=2',
       date: '2025-06-15'
-    },
-    {
-      id: 2,
-      userName: 'CommissionFan',
-      rating: 5,
-      comment: 'Beautiful art style, exceeded my expectations!',
-      avatar: 'https://i.pravatar.cc/40?img=3',
-      date: '2025-06-10'
     }
   ];
 
@@ -213,7 +236,7 @@ const ArtistDetailPage = () => {
     </View>
   );
 
-  // Gallery Content (only show if artist has galleries)
+  // Gallery Content
   const GalleryContent = () => (
     <View style={styles.tabContent}>
       {galleryItems.length > 0 ? (
@@ -245,9 +268,11 @@ const ArtistDetailPage = () => {
           ))}
         </View>
       ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No galleries available</Text>
-        </View>
+        <EmptyState
+          icon="🛒"
+          title="No galleries available"
+          description="This artist hasn't created any gallery items yet."
+        />
       )}
     </View>
   );
@@ -255,28 +280,107 @@ const ArtistDetailPage = () => {
   // Reviews Content
   const ReviewsContent = () => (
     <View style={styles.tabContent}>
-      {reviews.map((review) => (
-        <View key={review.id} style={styles.reviewItem}>
-          <Image source={{ uri: review.avatar }} style={styles.reviewAvatar} />
-          <View style={styles.reviewContent}>
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewUserName}>{review.userName}</Text>
-              <Text style={styles.reviewDate}>{review.date}</Text>
+      {reviews.length > 0 ? (
+        reviews.map((review) => (
+          <View key={review.id} style={styles.reviewItem}>
+            <Image source={{ uri: review.avatar }} style={styles.reviewAvatar} />
+            <View style={styles.reviewContent}>
+              <View style={styles.reviewHeader}>
+                <Text style={styles.reviewUserName}>{review.userName}</Text>
+                <Text style={styles.reviewDate}>{review.date}</Text>
+              </View>
+              <View style={styles.reviewStars}>
+                {[...Array(review.rating)].map((_, i) => (
+                  <Text key={i} style={styles.star}>⭐</Text>
+                ))}
+              </View>
+              <Text style={styles.reviewComment}>{review.comment}</Text>
             </View>
-            <View style={styles.reviewStars}>
-              {[...Array(review.rating)].map((_, i) => (
-                <Text key={i} style={styles.star}>⭐</Text>
-              ))}
-            </View>
-            <Text style={styles.reviewComment}>{review.comment}</Text>
           </View>
-        </View>
-      ))}
+        ))
+      ) : (
+        <EmptyState
+          icon="⭐"
+          title="No reviews yet"
+          description="This artist hasn't received any reviews."
+        />
+      )}
     </View>
   );
 
+  // Render invite modal
+  const renderInviteModal = () => (
+    <Modal
+      visible={showInviteModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowInviteModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Invite {artistData.name} to Project</Text>
+            <TouchableOpacity 
+              onPress={() => setShowInviteModal(false)}
+              style={styles.modalCloseButton}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalBody}>
+            <Text style={styles.modalSubtitle}>Select a project to invite this artist to:</Text>
+            
+            {userProjects.map((project) => (
+              <TouchableOpacity 
+                key={project.id}
+                style={styles.projectInviteCard}
+                onPress={() => handleInviteToProject(project.id)}
+              >
+                <View style={styles.projectCardHeader}>
+                  <Text style={styles.projectCardTitle}>{project.title}</Text>
+                  <StatusBadge status={project.status as any} size="small" />
+                </View>
+                
+                <Text style={styles.projectCardDescription} numberOfLines={2}>
+                  {project.description}
+                </Text>
+                
+                <View style={styles.projectCardDetails}>
+                  <Text style={styles.projectCardBudget}>Budget: {project.budget}</Text>
+                  <Text style={styles.projectCardDeadline}>Deadline: {project.deadline}</Text>
+                </View>
+                
+                <View style={styles.projectCardStats}>
+                  <Text style={styles.projectCardApplicants}>
+                    {project.applicantCount} applicants
+                  </Text>
+                  <Text style={styles.projectCardAction}>Tap to invite →</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            {userProjects.length === 0 && (
+              <EmptyState
+                icon="📋"
+                title="No active projects"
+                description="You need to create a project first before inviting artists."
+                buttonText="Create Project"
+                onButtonPress={() => {
+                  setShowInviteModal(false);
+                  router.push('/post-project');
+                }}
+                size="small"
+              />
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={AppStyles.container}>
       {/* Header with background image */}
       <View style={styles.headerContainer}>
         <Image source={{ uri: artistData.backgroundImage }} style={styles.backgroundImage} />
@@ -291,7 +395,39 @@ const ArtistDetailPage = () => {
             <View style={styles.usernameTag}>
               <Text style={styles.usernameText}>{artistData.username}</Text>
             </View>
-            <TouchableOpacity style={styles.headerButton}>
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => {
+                Alert.alert(
+                  'Share Artist',
+                  'How would you like to share this artist?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Copy Profile Link', 
+                      onPress: () => {
+                        console.log('Artist profile link copied');
+                        Alert.alert('Success', 'Artist profile link copied to clipboard');
+                      }
+                    },
+                    { 
+                      text: 'Share Portfolio', 
+                      onPress: () => {
+                        console.log('Sharing artist portfolio');
+                        Alert.alert('Share', 'Sharing artist portfolio...');
+                      }
+                    },
+                    { 
+                      text: 'Recommend Artist', 
+                      onPress: () => {
+                        console.log('Recommending artist');
+                        Alert.alert('Share', 'Recommending artist to friends...');
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
               <Text style={styles.headerButtonText}>⋯</Text>
             </TouchableOpacity>
           </View>
@@ -301,13 +437,25 @@ const ArtistDetailPage = () => {
         <View style={styles.artistInfo}>
           <View style={styles.avatarContainer}>
             <Image source={{ uri: artistData.avatar }} style={styles.avatar} />
-            <View style={styles.availabilityTag}>
-              <Text style={styles.availabilityText}>Available in July</Text>
-            </View>
+            <StatusBadge 
+              status={artistData.isAvailable ? "available" : "unavailable"}
+              text={artistData.isAvailable ? "Available in July" : "Unavailable"}
+              size="small"
+              style={styles.availabilityTag}
+            />
           </View>
           
           <View style={styles.artistDetails}>
-            <Text style={styles.artistName}>{artistData.name}</Text>
+            <View style={styles.artistNameRow}>
+              <Text style={styles.artistName}>{artistData.name}</Text>
+              {artistData.isVerified && (
+                <StatusBadge 
+                  status="verified"
+                  size="small"
+                  style={styles.verifiedBadge}
+                />
+              )}
+            </View>
             <View style={styles.ratingContainer}>
               <Text style={styles.rating}>⭐{artistData.rating}</Text>
               <View style={styles.badge}>
@@ -322,25 +470,14 @@ const ArtistDetailPage = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Invitation Calendar - only show if artist has it */}
-        {artistData.hasInvitationCalendar && (
-          <TouchableOpacity style={styles.invitationCard}>
-            <Text style={styles.calendarIcon}>📅</Text>
-            <Text style={styles.invitationText}>{artistData.invitationDate} Open Invitation</Text>
-            <TouchableOpacity style={styles.calendarButton}>
-              <Text style={styles.calendarButtonText}>View Calendar ›</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-        {/* Price List - only show if artist has it */}
+        {/* Price List */}
         {artistData.hasPriceList && (
           <View style={styles.priceListSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>💰</Text>
               <Text style={styles.sectionTitle}>Artist's Price List</Text>
               <TouchableOpacity>
-                <Text style={styles.sectionAction}>4 commission types ›</Text>
+                <Text style={styles.sectionAction}>2 commission types ›</Text>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.priceListScroll}>
@@ -412,55 +549,52 @@ const ArtistDetailPage = () => {
           </Animated.View>
         </PanGestureHandler>
 
-        <View style={styles.bottomPadding} />
+        <View style={GlobalStyles.bottomPadding} />
       </ScrollView>
 
       {/* Bottom Action Bar */}
-      <View style={styles.bottomActionBar}>
+      <View style={GlobalStyles.actionBar}>
         <TouchableOpacity 
-          style={styles.actionButton}
+          style={GlobalStyles.actionButton}
           onPress={() => setIsFavorited(!isFavorited)}
         >
-          <Text style={[styles.actionIcon, isFavorited && styles.activeActionIcon]}>
+          <Text style={[GlobalStyles.actionIcon, isFavorited && styles.activeActionIcon]}>
             {isFavorited ? '⭐' : '☆'}
           </Text>
-          <Text style={[styles.actionText, isFavorited && styles.activeActionText]}>
+          <Text style={[GlobalStyles.actionText, isFavorited && styles.activeActionText]}>
             {isFavorited ? 'Following' : 'Follow'}
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.actionButton}
+          style={GlobalStyles.actionButton}
           onPress={() => setIsFollowed(!isFollowed)}
         >
-          <Text style={[styles.actionIcon, isFollowed && styles.activeHeartIcon]}>
+          <Text style={[GlobalStyles.actionIcon, isFollowed && styles.activeHeartIcon]}>
             {isFollowed ? '❤️' : '🤍'}
           </Text>
-          <Text style={[styles.actionText, isFollowed && styles.activeActionText]}>
+          <Text style={[GlobalStyles.actionText, isFollowed && styles.activeActionText]}>
             {isFollowed ? 'Favorited' : 'Favorite'}
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.inviteButton}
-          onPress={() => {
-            // Navigate to chat or invite modal
-            console.log('Invite artist for commission');
-          }}
+          onPress={() => setShowInviteModal(true)}
         >
           <Text style={styles.inviteIcon}>👥</Text>
-          <Text style={styles.inviteButtonText}>Invite</Text>
+          <Text style={styles.inviteButtonText}>Invite to Project</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+
+      {/* Invite Modal */}
+      {renderInviteModal()}
+    </View>
   );
 };
 
+// Complete styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
   headerContainer: {
     position: 'relative',
     height: 280,
@@ -479,123 +613,112 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 200,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: Colors.overlay,
   },
   headerButtons: {
     position: 'absolute',
-    top: 50,
+    top: 50, // 使用 AppStyles.header 的状态栏高度
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    paddingHorizontal: 20,
+    ...Layout.paddingHorizontal,
   },
   headerButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: Layout.radius.xl,
+    backgroundColor: Colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...Typography.h5,
+    color: Colors.text,
   },
   headerRightButtons: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
   },
   usernameTag: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 12,
+    backgroundColor: Colors.overlay,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.lg,
+    marginRight: Layout.spacing.md,
   },
   usernameText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...Typography.badge,
+    color: Colors.text,
   },
   artistInfo: {
     position: 'absolute',
     bottom: 80,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
+    left: Layout.spacing.xl,
+    right: Layout.spacing.xl,
+    ...Layout.row,
     alignItems: 'flex-end',
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 16,
+    marginRight: Layout.spacing.lg,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    ...Layout.avatarXLarge,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.text,
   },
   availabilityTag: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  availabilityText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   artistDetails: {
     flex: 1,
   },
+  artistNameRow: {
+    ...Layout.row,
+    alignItems: 'center',
+    marginBottom: Layout.spacing.sm,
+  },
   artistName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h3,
+    color: Colors.text,
+    marginRight: Layout.spacing.sm,
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
+  verifiedBadge: {
+    marginLeft: Layout.spacing.sm,
+  },
   ratingContainer: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
   },
   rating: {
-    fontSize: 16,
-    color: '#FFD700',
-    marginRight: 12,
+    ...Typography.rating,
+    marginRight: Layout.spacing.md,
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   badge: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.md,
   },
   badgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    ...Typography.badge,
   },
   bio: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 20,
+    bottom: Layout.spacing.xl,
+    left: Layout.spacing.xl,
+    right: Layout.spacing.xl,
+    ...Typography.body,
+    color: Colors.text,
     textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
@@ -603,105 +726,172 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  invitationCard: {
-    backgroundColor: '#2A3A4A',
-    marginHorizontal: 20,
-    marginVertical: 16,
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
+  
+  // Modal Styles
+  modalOverlay: {
+    ...Layout.modalOverlay,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: Layout.radius.xl,
+    borderTopRightRadius: Layout.radius.xl,
+    maxHeight: '80%',
+    minHeight: '50%',
+  },
+  modalHeader: {
+    ...Layout.rowSpaceBetween,
+    alignItems: 'center',
+    padding: Layout.spacing.xl,
+    ...Layout.borderBottom,
+  },
+  modalTitle: {
+    ...Typography.h5,
+    flex: 1,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: Layout.radius.lg,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  calendarIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  invitationText: {
-    flex: 1,
-    color: '#FFFFFF',
+  modalCloseText: {
+    color: Colors.text,
     fontSize: 16,
     fontWeight: 'bold',
   },
-  calendarButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  modalBody: {
+    flex: 1,
+    padding: Layout.spacing.xl,
   },
-  calendarButtonText: {
-    color: '#00A8FF',
-    fontSize: 14,
+  modalSubtitle: {
+    ...Typography.bodyMuted,
+    marginBottom: Layout.spacing.xl,
   },
+  projectInviteCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.lg,
+    padding: Layout.spacing.lg,
+    marginBottom: Layout.spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  projectCardHeader: {
+    ...Layout.rowSpaceBetween,
+    alignItems: 'center',
+    marginBottom: Layout.spacing.sm,
+  },
+  projectCardTitle: {
+    ...Typography.h6,
+    flex: 1,
+    marginRight: Layout.spacing.md,
+  },
+  projectCardDescription: {
+    ...Typography.bodyMuted,
+    marginBottom: Layout.spacing.md,
+    lineHeight: 20,
+  },
+  projectCardDetails: {
+    marginBottom: Layout.spacing.md,
+  },
+  projectCardBudget: {
+    ...Typography.bodySmall,
+    color: Colors.secondary,
+    fontWeight: 'bold',
+    marginBottom: Layout.spacing.xs,
+  },
+  projectCardDeadline: {
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
+  },
+  projectCardStats: {
+    ...Layout.rowSpaceBetween,
+    alignItems: 'center',
+  },
+  projectCardApplicants: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+  },
+  projectCardAction: {
+    ...Typography.bodySmall,
+    color: Colors.primary,
+    fontWeight: 'bold',
+  },
+
+  // Price List Section
   priceListSection: {
-    marginBottom: 20,
+    marginBottom: Layout.spacing.xl,
   },
   sectionHeader: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    ...Layout.paddingHorizontal,
+    marginBottom: Layout.spacing.lg,
   },
   sectionIcon: {
     fontSize: 20,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
   },
   sectionTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h5,
   },
   sectionAction: {
-    color: '#00A8FF',
-    fontSize: 14,
+    ...Typography.bodySmall,
+    color: Colors.primary,
   },
   priceListScroll: {
-    paddingLeft: 20,
+    paddingLeft: Layout.spacing.xl,
   },
   priceListItem: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    marginRight: 12,
+    ...Layout.cardSmall,
+    marginRight: Layout.spacing.md,
     overflow: 'hidden',
     width: 120,
+    paddingBottom: Layout.spacing.sm,
   },
   priceListImage: {
     width: '100%',
-    height: 80,
+    height: 60,
   },
   priceListInfo: {
-    padding: 12,
+    padding: Layout.spacing.sm,
   },
   priceListTitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    ...Typography.badge,
+    marginBottom: Layout.spacing.xs,
   },
   priceListPrice: {
-    color: '#FF6B35',
-    fontSize: 14,
+    ...Typography.bodySmall,
+    color: Colors.secondary,
     fontWeight: 'bold',
   },
+
+  // Tab Navigation
   tabNavigation: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+    backgroundColor: 'transparent',
   },
   tabButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 16,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    marginRight: Layout.spacing.lg,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   activeTabButton: {
-    borderBottomColor: '#00A8FF',
+    borderBottomColor: Colors.primary,
   },
   tabButtonText: {
-    fontSize: 16,
-    color: '#888',
+    ...Typography.body,
+    color: Colors.textMuted,
   },
   activeTabButtonText: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   tabSwipeContainer: {
@@ -712,34 +902,38 @@ const styles = StyleSheet.create({
     width: screenWidth,
   },
   tabContent: {
-    paddingHorizontal: 20,
+    ...Layout.paddingHorizontal,
   },
+
+  // Portfolio Grid
   portfolioGrid: {
-    flexDirection: 'row',
+    ...Layout.row,
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   portfolioItem: {
     width: '48%',
     aspectRatio: 1,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginBottom: Layout.spacing.lg,
+    borderRadius: Layout.radius.md,
     overflow: 'hidden',
   },
   portfolioImage: {
     width: '100%',
     height: '100%',
   },
+
+  // Gallery Grid
   galleryGrid: {
-    flexDirection: 'row',
+    ...Layout.row,
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   galleryItem: {
     width: '48%',
-    marginBottom: 16,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    marginBottom: Layout.spacing.lg,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
     overflow: 'hidden',
   },
   galleryImage: {
@@ -747,123 +941,82 @@ const styles = StyleSheet.create({
     height: 120,
   },
   galleryInfo: {
-    padding: 12,
+    padding: Layout.spacing.md,
   },
   galleryTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    ...Typography.bodySmall,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: Layout.spacing.xs,
   },
   galleryPrice: {
-    color: '#FF6B35',
-    fontSize: 16,
+    ...Typography.body,
+    color: Colors.secondary,
     fontWeight: 'bold',
   },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: '#888',
-    fontSize: 16,
-  },
+
+  // Reviews
   reviewItem: {
-    flexDirection: 'row',
-    marginBottom: 20,
+    ...Layout.row,
+    marginBottom: Layout.spacing.xl,
   },
   reviewAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
+    ...Layout.avatar,
+    marginRight: Layout.spacing.md,
   },
   reviewContent: {
     flex: 1,
   },
   reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Layout.spacing.xs,
   },
   reviewUserName: {
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   reviewDate: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
   },
   reviewStars: {
-    flexDirection: 'row',
-    marginBottom: 8,
+    ...Layout.row,
+    marginBottom: Layout.spacing.sm,
   },
   star: {
     fontSize: 14,
     marginRight: 2,
   },
   reviewComment: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.body,
     lineHeight: 20,
   },
-  bottomPadding: {
-    height: 100,
-  },
-  bottomActionBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#1A1A1A',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 20,
-  },
-  actionButton: {
-    alignItems: 'center',
-    marginRight: 24,
-  },
-  actionIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-    color: '#888',
-  },
+
+  // Action Bar
   activeActionIcon: {
-    color: '#FFD700',
+    color: Colors.rating,
   },
   activeHeartIcon: {
-    color: '#FF6B9D',
-  },
-  actionText: {
-    fontSize: 12,
-    color: '#888',
+    color: Colors.error,
   },
   activeActionText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontWeight: 'bold',
   },
   inviteButton: {
     flex: 1,
-    backgroundColor: '#00A8FF',
-    flexDirection: 'row',
+    backgroundColor: Colors.primary,
+    ...Layout.row,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 24,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.radius.xxl,
   },
   inviteIcon: {
     fontSize: 18,
-    marginRight: 8,
+    marginRight: Layout.spacing.sm,
   },
   inviteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...Typography.button,
   },
 });
 

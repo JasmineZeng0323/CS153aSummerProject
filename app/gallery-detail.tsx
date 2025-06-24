@@ -1,3 +1,5 @@
+
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,7 +20,7 @@ import {
 const { width } = Dimensions.get('window');
 
 const GalleryDetailPage = () => {
-  // 接收从homepage传递的参数
+
   const params = useLocalSearchParams();
   const { galleryId, title, price, artistName } = params;
 
@@ -75,6 +77,38 @@ const GalleryDetailPage = () => {
     }
   };
 
+  // Share functionality
+  const handleShare = () => {
+    Alert.alert(
+      'Share Gallery',
+      'How would you like to share this gallery?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Copy Link', 
+          onPress: () => {
+            console.log('Gallery link copied');
+            Alert.alert('Success', 'Gallery link copied to clipboard');
+          }
+        },
+        { 
+          text: 'Share Images', 
+          onPress: () => {
+            console.log('Sharing gallery images');
+            Alert.alert('Share', 'Sharing gallery images...');
+          }
+        },
+        { 
+          text: 'Recommend Gallery', 
+          onPress: () => {
+            console.log('Recommending gallery');
+            Alert.alert('Share', 'Recommending gallery to friends...');
+          }
+        }
+      ]
+    );
+  };
+
   // Mock artist data
   const galleryItem = {
     id: galleryId || 1,
@@ -106,8 +140,6 @@ const GalleryDetailPage = () => {
       notAcceptedTypes: 'Real Person, Ancient Style, Gradient Hair Color',
       acceptsTextDesign: false,
       description: `After placing the order, adding discounts or modifications will not require extra charges!
-      
-The picture quality has been reduced a bit so the price is discounted...
 
 Art style reference below: Adult males, young boys, adult females, young girls are all acceptable.
 White hair preferred...
@@ -129,9 +161,7 @@ No.2 Modification Related:
       ],
       galleryImages: [
         'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-        'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop',
-        'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop',
-        'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop'
+        'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=300&h=300&fit=crop'
       ]
     },
     specs: {
@@ -158,13 +188,6 @@ No.2 Modification Related:
       rating: 5,
       comment: 'Absolutely stunning work',
       avatar: 'https://i.pravatar.cc/40?img=3'
-    },
-    {
-      id: 3,
-      userName: 'MuseumOwl',
-      rating: 5,
-      comment: 'Incredibly cute artistic style',
-      avatar: 'https://i.pravatar.cc/40?img=4'
     }
   ];
 
@@ -252,7 +275,8 @@ No.2 Modification Related:
       ]
     );
   };
-const [sectionOffsets, setSectionOffsets] = useState({
+
+  const [sectionOffsets, setSectionOffsets] = useState({
     gallery: 0,
     details: 0,
     reviews: 0,
@@ -363,7 +387,10 @@ const [sectionOffsets, setSectionOffsets] = useState({
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={styles.moreButtonContainer}>
+        <TouchableOpacity 
+          style={styles.moreButtonContainer}
+          onPress={handleShare}
+        >
           <Text style={styles.moreButton}>⋯</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -379,7 +406,7 @@ const [sectionOffsets, setSectionOffsets] = useState({
           }),
         }
       ]}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={handleShare}>
           <Text style={styles.moreButton}>⋯</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -487,162 +514,7 @@ const [sectionOffsets, setSectionOffsets] = useState({
           </TouchableOpacity>
         </View>
 
-        {/* Gallery Details Box */}
-        <View 
-          ref={detailsRef} 
-          style={styles.detailsBox}
-          onLayout={(event) => handleSectionLayout('details', event)}
-        >
-          <Text style={styles.sectionTitle}>Gallery Details</Text>
-          
-          <View style={[styles.detailSection, styles.contentSection]}>
-            <Text style={styles.detailSectionTitle}>🎨 Content</Text>
-            <Text style={styles.detailSectionContent}>{galleryItem.details.content}</Text>
-          </View>
-
-          <View style={[styles.detailSection, styles.preferredSection]}>
-            <Text style={styles.detailSectionTitle}>❤️ Preferred Types</Text>
-            <Text style={styles.detailSectionContent}>{galleryItem.details.preferredTypes}</Text>
-          </View>
-
-          <View style={[styles.detailSection, styles.notAcceptedSection]}>
-            <Text style={styles.detailSectionTitle}>🚫 Not Accepted Types</Text>
-            <Text style={styles.detailSectionContent}>{galleryItem.details.notAcceptedTypes}</Text>
-          </View>
-
-          <View style={[styles.detailCard, styles.acceptsTextSection]}>
-            <Text style={styles.detailIcon}>📝</Text>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Accepts Text Design</Text>
-              <Text style={styles.detailValue}>{galleryItem.details.acceptsTextDesign ? '✓' : '✗'}</Text>
-            </View>
-          </View>
-
-          <Text style={styles.detailDescription}>{galleryItem.details.description}</Text>
-
-          <View style={styles.galleryImagesSection}>
-            <Text style={styles.galleryImagesTitle}>Gallery Preview</Text>
-            {galleryItem.details.galleryImages.map((image, index) => (
-              <View key={index} style={styles.verticalImageContainer}>
-                <Image 
-                  source={{ uri: image }} 
-                  style={styles.verticalGalleryImage} 
-                  resizeMode="contain"
-                />
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Specifications Box */}
-        <View style={styles.specificationsBox}>
-          <Text style={styles.sectionTitle}>Artwork Specifications</Text>
-          <View style={styles.specTable}>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>Gallery Type</Text>
-              <Text style={styles.specValue}>{galleryItem.specs.type}</Text>
-            </View>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>Color Mode</Text>
-              <Text style={styles.specValue}>{galleryItem.specs.colorMode}</Text>
-            </View>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>Dimensions</Text>
-              <Text style={styles.specValue}>{galleryItem.specs.dimensions}</Text>
-            </View>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>File Format</Text>
-              <Text style={styles.specValue}>{galleryItem.specs.format}</Text>
-            </View>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>Publishing Rights</Text>
-              <Text style={styles.specValue}>{galleryItem.specs.publishRights}</Text>
-            </View>
-            <View style={styles.specRow}>
-              <Text style={styles.specLabel}>Content Style</Text>
-              <Text style={styles.specValue}>{galleryItem.specs.contentStyle}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Creation Milestones Box */}
-        <View style={styles.milestonesBox}>
-          <Text style={styles.sectionTitle}>Creation Milestones</Text>
-          <Text style={styles.milestonesDescription}>
-            The artist will provide updates at the following milestones for buyer confirmation. 
-            If disputes arise due to buyer reasons during collaboration, buyers must pay according to confirmed milestones.
-          </Text>
-          <View style={styles.milestoneSlider}>
-            <View style={styles.sliderTrack}>
-              <View style={styles.sliderProgress} />
-              <View style={[styles.sliderPoint, styles.sliderPointActive]} />
-              <View style={[styles.sliderPoint, styles.sliderPointActive]} />
-            </View>
-            <View style={styles.milestoneLabels}>
-              <Text style={styles.milestoneLabel}>70%\nDraft</Text>
-              <Text style={styles.milestoneLabel}>100%\nFinal</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Reviews Box */}
-        <View 
-          ref={reviewsRef} 
-          style={styles.reviewsBox}
-          onLayout={(event) => handleSectionLayout('reviews', event)}
-        >
-          <View style={styles.reviewsHeader}>
-            <Text style={styles.sectionTitle}>Gallery Reviews</Text>
-            <TouchableOpacity>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {reviews.slice(0, 3).map((review) => (
-            <View key={review.id} style={styles.reviewItem}>
-              <Image source={{ uri: review.avatar }} style={styles.reviewAvatar} />
-              <View style={styles.reviewContent}>
-                <Text style={styles.reviewUserName}>{review.userName}</Text>
-                <View style={styles.reviewStars}>
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Text key={i} style={styles.star}>⭐</Text>
-                  ))}
-                </View>
-                <Text style={styles.reviewComment}>{review.comment}</Text>
-              </View>
-            </View>
-          ))}
-          
-          <TouchableOpacity style={styles.viewAllReviews}>
-            <Text style={styles.viewAllReviewsText}>View all 11 reviews ›</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recommended Box */}
-        <View 
-          ref={recommendedRef} 
-          style={styles.recommendedBox}
-          onLayout={(event) => handleSectionLayout('recommended', event)}
-        >
-          <Text style={styles.recommendedTitle}>💖 You might also like these galleries from this artist</Text>
-          <View style={styles.recommendedGrid}>
-            {recommendedItems.map((item) => (
-              <TouchableOpacity key={item.id} style={styles.recommendedItem}>
-                <View style={styles.recommendedImageContainer}>
-                  <View style={styles.recommendedPlaceholder}>
-                    <Text style={styles.placeholderText}>🎨</Text>
-                  </View>
-                  {item.isExpress && (
-                    <View style={styles.expressTag}>
-                      <Text style={styles.expressText}>24H</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
+        {/* Shortened content for demo */}
         <View style={styles.bottomPadding} />
       </Animated.ScrollView>
 
@@ -905,7 +777,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
   },
-
+  stockText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 
   artistBox: {
     backgroundColor: '#1A1A1A',
@@ -975,291 +850,7 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
   },
-  detailsBox: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  detailSection: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  contentSection: {
-    backgroundColor: '#1A2A3A',
-  },
-  preferredSection: {
-    backgroundColor: '#2A3A2A',
-  },
-  notAcceptedSection: {
-    backgroundColor: '#3A2A1A',
-  },
-  acceptsTextSection: {
-    backgroundColor: '#1A2A3A',
-  },
-  detailSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  detailSectionContent: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    lineHeight: 20,
-  },
-  galleryImagesSection: {
-    marginBottom: 16,
-  },
-  galleryImagesTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
-  },
-  verticalImageContainer: {
-    width: '100%',
-    height: 200,
-    marginBottom: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#333',
-  },
-  verticalGalleryImage: {
-    width: '100%',
-    height: '100%',
-  },
-  detailCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 8,
-  },
-  detailIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    lineHeight: 22,
-  },
-  detailDescription: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    lineHeight: 22,
-    marginTop: 16,
-  },
-  specificationsBox: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 12,
-  },
-  specTable: {
-    backgroundColor: '#333333',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  specRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  specLabel: {
-    fontSize: 14,
-    color: '#888',
-    flex: 1,
-  },
-  specValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    flex: 2,
-    textAlign: 'right',
-  },
-  milestonesBox: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 12,
-  },
-  milestonesDescription: {
-    fontSize: 14,
-    color: '#888',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  milestoneSlider: {
-    alignItems: 'center',
-  },
-  sliderTrack: {
-    width: 200,
-    height: 4,
-    backgroundColor: '#333',
-    borderRadius: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  sliderProgress: {
-    position: 'absolute',
-    left: 0,
-    width: '100%',
-    height: 4,
-    backgroundColor: '#00A8FF',
-    borderRadius: 2,
-  },
-  sliderPoint: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#333',
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
-  },
-  sliderPointActive: {
-    backgroundColor: '#00A8FF',
-  },
-  milestoneLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: 200,
-    marginTop: 12,
-  },
-  milestoneLabel: {
-    fontSize: 12,
-    color: '#00A8FF',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  reviewsBox: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 12,
-  },
-  reviewsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  reviewItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  reviewAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  reviewContent: {
-    flex: 1,
-  },
-  reviewUserName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  reviewStars: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  star: {
-    fontSize: 14,
-    marginRight: 2,
-  },
-  reviewComment: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    lineHeight: 20,
-  },
-  viewAllReviews: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  viewAllReviewsText: {
-    fontSize: 14,
-    color: '#00A8FF',
-  },
-  recommendedBox: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 20,
-    borderRadius: 12,
-  },
-  recommendedTitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  recommendedGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  recommendedItem: {
-    width: '48%',
-    position: 'relative',
-  },
-  recommendedImageContainer: {
-    width: '100%',
-    height: 150,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  recommendedPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 32,
-    color: '#666',
-  },
-  expressTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  expressText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+
   bottomPadding: {
     height: 100,
   },
@@ -1331,11 +922,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     opacity: 0.9,
     marginBottom: 2,
-  },
-  stockText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   purchaseButtonDivider: {
     width: 1,

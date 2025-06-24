@@ -1,28 +1,50 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
+import { Colors } from './components/styles/Colors';
+import { GlobalStyles } from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
+interface Message {
+  id: number;
+  text: string;
+  time: string;
+  isSender: boolean;
+  type: 'text' | 'image' | 'file';
+  imageUrl?: string;
+  fileName?: string;
+}
 
 const ChatPage = () => {
   const params = useLocalSearchParams();
   const { chatId, chatName, chatAvatar, isOnline } = params;
+  const scrollViewRef = useRef<ScrollView>(null);
   
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Default messages
+  const defaultMessages: Message[] = [
     {
       id: 1,
       text: 'Hi there! I saw your portfolio and I\'m really interested in commissioning you for a character design.',
@@ -72,36 +94,66 @@ const ChatPage = () => {
       time: '10:47',
       isSender: true,
       type: 'text'
-    },
-    {
-      id: 8,
-      text: 'Usually takes me 1-2 weeks depending on complexity. I can start next Monday if you\'re ready to proceed! 😊',
-      time: '10:50',
-      isSender: false,
-      type: 'text'
-    },
-    {
-      id: 9,
-      text: 'Excellent! Let\'s move forward. Should I send the deposit now?',
-      time: '10:52',
-      isSender: true,
-      type: 'text'
-    },
-    {
-      id: 10,
-      text: 'Yes! I\'ll send you the contract and payment details. Looking forward to creating something amazing for you! ✨',
-      time: '10:55',
-      isSender: false,
-      type: 'text'
     }
-  ]);
+  ];
 
-  // Common emojis for quick access
   const commonEmojis = ['😊', '😂', '❤️', '👍', '👎', '😢', '😮', '😡', '🎨', '✨', '🔥', '💯', '😍', '🤔', '👏', '🙏'];
 
-  const sendMessage = (messageText = message, messageType = 'text', imageUrl = null, fileName = null) => {
+  useEffect(() => {
+    // Load messages from storage when component mounts
+    loadMessages();
+  }, []);
+
+  useEffect(() => {
+    // Auto scroll to bottom when new messages arrive
+    if (!isLoading) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages, isLoading]);
+
+  const getStorageKey = () => `chat_messages_${chatId}`;
+
+  const loadMessages = async () => {
+    try {
+      const storageKey = getStorageKey();
+      const storedMessages = await AsyncStorage.getItem(storageKey);
+      
+      if (storedMessages) {
+        const parsedMessages = JSON.parse(storedMessages);
+        setMessages(parsedMessages);
+      } else {
+        // If no stored messages, use default messages
+        setMessages(defaultMessages);
+        // Save default messages to storage
+        await AsyncStorage.setItem(storageKey, JSON.stringify(defaultMessages));
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      // Fallback to default messages
+      setMessages(defaultMessages);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveMessages = async (newMessages: Message[]) => {
+    try {
+      const storageKey = getStorageKey();
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newMessages));
+    } catch (error) {
+      console.error('Error saving messages:', error);
+    }
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
+  const sendMessage = async (messageText = message, messageType: 'text' | 'image' | 'file' = 'text', imageUrl?: string, fileName?: string) => {
     if (messageText.trim() || messageType !== 'text') {
-      const newMessage = {
+      const newMessage: Message = {
         id: messages.length + 1,
         text: messageText || (messageType === 'image' ? 'Image' : 'File'),
         time: new Date().toLocaleTimeString('en-US', { 
@@ -111,24 +163,28 @@ const ChatPage = () => {
         }),
         isSender: true,
         type: messageType,
-        imageUrl: imageUrl,
-        fileName: fileName
+        imageUrl,
+        fileName
       };
       
-      setMessages([...messages, newMessage]);
+      const updatedMessages = [...messages, newMessage];
+      setMessages(updatedMessages);
+      
+      // Save messages to storage
+      await saveMessages(updatedMessages);
+      
       setMessage('');
       setShowEmojiPicker(false);
     }
   };
 
-  const handleEmojiPress = (emoji) => {
+  const handleEmojiPress = (emoji: string) => {
     setMessage(message + emoji);
     setShowEmojiPicker(false);
   };
 
   const handleImagePress = async () => {
     try {
-      // Request permissions
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (permissionResult.granted === false) {
@@ -136,7 +192,6 @@ const ChatPage = () => {
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -162,7 +217,7 @@ const ChatPage = () => {
 
       if (!result.canceled && result.assets[0]) {
         const file = result.assets[0];
-        sendMessage(file.name, 'file', null, file.name);
+        sendMessage(file.name, 'file', undefined, file.name);
       }
     } catch (error) {
       console.error('Error picking document:', error);
@@ -170,7 +225,6 @@ const ChatPage = () => {
   };
 
   const handleAvatarPress = () => {
-    // Navigate to artist profile
     router.push({
       pathname: '/artist-detail',
       params: {
@@ -181,7 +235,36 @@ const ChatPage = () => {
     });
   };
 
-  const renderMessage = (msg) => {
+  // Render custom header
+  const renderCustomHeader = () => (
+    <View style={styles.customHeader}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Text style={styles.backIcon}>←</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.headerCenter} onPress={handleAvatarPress}>
+        <Image 
+          source={{ uri: chatAvatar as string || `https://picsum.photos/seed/user${chatId}/40/40` }} 
+          style={styles.headerAvatar} 
+        />
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerName}>{chatName || 'Artist Name'}</Text>
+          <Text style={[
+            styles.headerStatus,
+            { color: isOnline === 'true' ? Colors.online : Colors.textMuted }
+          ]}>
+            {isOnline === 'true' ? 'Online' : 'Last seen recently'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Removed more button */}
+      <View style={styles.headerSpacer} />
+    </View>
+  );
+
+  // Render message
+  const renderMessage = (msg: Message) => {
     return (
       <View key={msg.id} style={[
         styles.messageContainer,
@@ -244,191 +327,184 @@ const ChatPage = () => {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.headerCenter} onPress={handleAvatarPress}>
-          <Image 
-            source={{ uri: chatAvatar as string || `https://picsum.photos/seed/user${chatId}/40/40` }} 
-            style={styles.headerAvatar} 
-          />
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerName}>{chatName || 'Artist Name'}</Text>
-            <Text style={styles.headerStatus}>
-              {isOnline === 'true' ? 'Online' : 'Last seen recently'}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.moreButton}>
-          <Text style={styles.moreIcon}>⋯</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Messages */}
-      <KeyboardAvoidingView 
-        style={styles.chatContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={90}
+  // Render emoji picker
+  const renderEmojiPicker = () => (
+    <Modal
+      visible={showEmojiPicker}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowEmojiPicker(false)}
+    >
+      <TouchableOpacity 
+        style={styles.emojiModalOverlay}
+        onPress={() => setShowEmojiPicker(false)}
       >
-        <ScrollView 
-          style={styles.messagesContainer}
-          showsVerticalScrollIndicator={false}
-          ref={(ref) => {
-            if (ref) {
-              ref.scrollToEnd({ animated: true });
+        <View style={styles.emojiPicker}>
+          <Text style={styles.emojiPickerTitle}>Choose an emoji</Text>
+          <View style={styles.emojiGrid}>
+            {commonEmojis.map((emoji, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.emojiButton}
+                onPress={() => handleEmojiPress(emoji)}
+              >
+                <Text style={styles.emoji}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  // Render input area
+  const renderInputArea = () => (
+    <View style={styles.inputContainer}>
+      <View style={styles.inputArea}>
+        <TextInput
+          style={styles.messageInput}
+          value={message}
+          onChangeText={setMessage}
+          placeholder="Type a message..."
+          placeholderTextColor={Colors.textMuted}
+          multiline
+          maxLength={1000}
+          blurOnSubmit={false}
+          onSubmitEditing={() => {
+            if (message.trim()) {
+              sendMessage();
             }
           }}
-        >
-          {messages.map(renderMessage)}
-        </ScrollView>
-
-        {/* Emoji Picker Modal */}
-        <Modal
-          visible={showEmojiPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowEmojiPicker(false)}
-        >
+        />
+        
+        <View style={styles.inputActions}>
           <TouchableOpacity 
-            style={styles.emojiModalOverlay}
-            onPress={() => setShowEmojiPicker(false)}
+            style={styles.actionButton} 
+            onPress={() => setShowEmojiPicker(true)}
           >
-            <View style={styles.emojiPicker}>
-              <Text style={styles.emojiPickerTitle}>Choose an emoji</Text>
-              <View style={styles.emojiGrid}>
-                {commonEmojis.map((emoji, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.emojiButton}
-                    onPress={() => handleEmojiPress(emoji)}
-                  >
-                    <Text style={styles.emoji}>{emoji}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            <Text style={styles.actionIcon}>😊</Text>
           </TouchableOpacity>
-        </Modal>
-
-        {/* Input Area */}
-        <View style={styles.inputContainer}>
-          <View style={styles.inputArea}>
-            <TextInput
-              style={styles.messageInput}
-              value={message}
-              onChangeText={setMessage}
-              placeholder="Type a message..."
-              placeholderTextColor="#666"
-              multiline
-              maxLength={1000}
-            />
-            
-            <View style={styles.inputActions}>
-              <TouchableOpacity 
-                style={styles.actionButton} 
-                onPress={() => setShowEmojiPicker(true)}
-              >
-                <Text style={styles.actionIcon}>😊</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.actionButton} onPress={handleImagePress}>
-                <Text style={styles.actionIcon}>📷</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.actionButton} onPress={handleAttachmentPress}>
-                <Text style={styles.actionIcon}>📎</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
           
-          <TouchableOpacity 
-            style={[styles.sendButton, message.trim() ? styles.sendButtonActive : styles.sendButtonInactive]}
-            onPress={() => sendMessage()}
-            disabled={!message.trim()}
-          >
-            <Text style={styles.sendIcon}>→</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={handleImagePress}>
+            <Text style={styles.actionIcon}>📷</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={handleAttachmentPress}>
+            <Text style={styles.actionIcon}>📎</Text>
           </TouchableOpacity>
         </View>
+      </View>
+      
+      <TouchableOpacity 
+        style={[
+          styles.sendButton, 
+          message.trim() ? styles.sendButtonActive : styles.sendButtonInactive
+        ]}
+        onPress={() => {
+          if (message.trim()) {
+            sendMessage();
+            dismissKeyboard();
+          }
+        }}
+        disabled={!message.trim()}
+      >
+        <Text style={styles.sendIcon}>→</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={GlobalStyles.container}>
+      {/* Custom header */}
+      {renderCustomHeader()}
+
+      {/* Chat content */}
+      <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <View style={styles.chatContainer}>
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {messages.map(renderMessage)}
+          </ScrollView>
+        </View>
+      </TouchableWithoutFeedback>
+
+      {/* Input area */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        {renderInputArea()}
       </KeyboardAvoidingView>
+
+      {/* Emoji picker */}
+      {renderEmojiPicker()}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+  // Custom header
+  customHeader: {
+    ...Layout.rowSpaceBetween,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    ...Layout.borderBottom,
   },
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...Layout.columnCenter,
   },
   backIcon: {
-    fontSize: 24,
-    color: '#FFFFFF',
+    ...Typography.h4,
+    color: Colors.text,
   },
   headerCenter: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
+    ...Layout.row,
+    marginLeft: Layout.spacing.sm,
   },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
+    ...Layout.avatar,
+    marginRight: Layout.spacing.md,
   },
   headerInfo: {
     flex: 1,
   },
   headerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h6,
+    color: Colors.text,
   },
   headerStatus: {
-    fontSize: 12,
-    color: '#4CAF50',
+    ...Typography.caption,
     marginTop: 2,
   },
-  moreButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerSpacer: {
+    width: 40, // Same width as back button for balance
   },
-  moreIcon: {
-    fontSize: 20,
-    color: '#FFFFFF',
-  },
+
+  // Chat container
   chatContainer: {
     flex: 1,
   },
   messagesContainer: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Layout.spacing.lg,
   },
+  messagesContent: {
+    paddingVertical: Layout.spacing.sm,
+    flexGrow: 1,
+  },
+
+  // Message styles
   messageContainer: {
-    flexDirection: 'row',
-    marginVertical: 4,
+    ...Layout.row,
+    marginVertical: Layout.spacing.xs,
     alignItems: 'flex-end',
   },
   senderMessage: {
@@ -438,108 +514,103 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 4,
+    ...Layout.avatarSmall,
+    marginRight: Layout.spacing.sm,
+    marginBottom: Layout.spacing.xs,
   },
   avatarPlaceholder: {
     width: 40,
   },
   messageBubble: {
     maxWidth: '75%',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
     borderRadius: 18,
-    marginHorizontal: 4,
+    marginHorizontal: Layout.spacing.xs,
   },
   senderBubble: {
-    backgroundColor: '#00A8FF',
-    borderBottomRightRadius: 4,
+    backgroundColor: Colors.primary,
+    borderBottomRightRadius: Layout.spacing.xs,
   },
   receiverBubble: {
-    backgroundColor: '#1A1A1A',
-    borderBottomLeftRadius: 4,
+    backgroundColor: Colors.surface,
+    borderBottomLeftRadius: Layout.spacing.xs,
   },
   messageText: {
-    fontSize: 16,
+    ...Typography.body,
     lineHeight: 22,
   },
   senderText: {
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   receiverText: {
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   messageTime: {
-    fontSize: 11,
-    marginTop: 4,
+    ...Typography.caption,
+    marginTop: Layout.spacing.xs,
     opacity: 0.7,
   },
   senderTime: {
-    color: '#FFFFFF',
+    color: Colors.text,
     alignSelf: 'flex-end',
   },
   receiverTime: {
-    color: '#AAA',
+    color: Colors.textMuted,
     alignSelf: 'flex-start',
   },
   messageImage: {
     width: 200,
     height: 150,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: Layout.radius.md,
+    marginBottom: Layout.spacing.sm,
   },
   fileContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
+    ...Layout.row,
+    paddingVertical: Layout.spacing.sm,
   },
   fileIcon: {
     fontSize: 20,
-    marginRight: 8,
+    marginRight: Layout.spacing.sm,
   },
   fileName: {
-    fontSize: 14,
+    ...Typography.bodySmall,
     flex: 1,
   },
+
+  // Input area
   inputContainer: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#1A1A1A',
-    backgroundColor: '#0A0A0A',
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    ...Layout.borderTop,
+    backgroundColor: Colors.background,
   },
   inputArea: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.xl,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    marginRight: Layout.spacing.sm,
     maxHeight: 100,
   },
   messageInput: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    lineHeight: 22,
+    ...Typography.body,
+    color: Colors.text,
     minHeight: 22,
     textAlignVertical: 'top',
   },
   inputActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
+    ...Layout.row,
+    marginTop: Layout.spacing.sm,
   },
   actionButton: {
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
+    ...Layout.columnCenter,
+    marginRight: Layout.spacing.sm,
   },
   actionIcon: {
     fontSize: 18,
@@ -547,40 +618,38 @@ const styles = StyleSheet.create({
   sendButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: Layout.radius.xl,
+    ...Layout.columnCenter,
   },
   sendButtonActive: {
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.primary,
   },
   sendButtonInactive: {
-    backgroundColor: '#333',
+    backgroundColor: Colors.card,
   },
   sendIcon: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: Colors.text,
     fontWeight: 'bold',
   },
-  // Emoji Picker Styles
+
+  // Emoji picker
   emojiModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    ...Layout.modalOverlay,
     justifyContent: 'flex-end',
   },
   emojiPicker: {
-    backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: Layout.radius.xl,
+    borderTopRightRadius: Layout.radius.xl,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.xl,
     maxHeight: 300,
   },
   emojiPickerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
+    ...Typography.h5,
+    color: Colors.text,
+    marginBottom: Layout.spacing.lg,
     textAlign: 'center',
   },
   emojiGrid: {
@@ -591,11 +660,10 @@ const styles = StyleSheet.create({
   emojiButton: {
     width: '18%',
     aspectRatio: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    borderRadius: 8,
-    backgroundColor: '#2A2A2A',
+    ...Layout.columnCenter,
+    marginBottom: Layout.spacing.md,
+    borderRadius: Layout.radius.sm,
+    backgroundColor: Colors.card,
   },
   emoji: {
     fontSize: 24,

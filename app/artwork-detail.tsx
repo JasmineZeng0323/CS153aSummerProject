@@ -1,16 +1,20 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { Colors } from './components/styles/Colors';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -21,6 +25,16 @@ const ArtworkDetailPage = () => {
   const [liked, setLiked] = useState(isLiked === 'true');
   const [isFollowing, setIsFollowing] = useState(false);
   const [likeCount, setLikeCount] = useState(parseInt(likes as string) || 0);
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    StatusBar.setBarStyle('light-content', true);
+    StatusBar.setBackgroundColor(Colors.background, true);
+    
+    return () => {
+      StatusBar.setBarStyle('default', true);
+    };
+  }, []);
 
   // Mock artist data
   const artistData = {
@@ -33,121 +47,174 @@ const ArtworkDetailPage = () => {
     setLikeCount(prev => liked ? prev - 1 : prev + 1);
   };
 
+  const handleBack = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      router.back();
+    }, 50);
+  };
+
   const handleFollow = () => {
     setIsFollowing(!isFollowing);
   };
 
-  return (
-    <Modal visible={true} animationType="fade" presentationStyle="fullScreen">
-      <SafeAreaView style={styles.container}>
-        {/* Minimal Header - floating over image */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>←</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>⋯</Text>
-          </TouchableOpacity>
-        </View>
+  const handleArtistPress = () => {
+    router.push({
+      pathname: '/artist-detail',
+      params: {
+        artistId: 1,
+        artistName: artistData.name,
+        artistAvatar: artistData.avatar
+      }
+    });
+  };
 
-        {/* Scrollable Image Container - 支持图片滚动查看 */}
-        <ScrollView 
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContentContainer}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          maximumZoomScale={3.0}
-          minimumZoomScale={1.0}
-          bouncesZoom={true}
-        >
-          <View style={styles.imageWrapper}>
-            <Image 
-              source={{ uri: image as string }} 
-              style={styles.mainImage}
-              resizeMode="contain"
-            />
-          </View>
-        </ScrollView>
+  if (!isVisible) {
+    return <View style={styles.container} />;
+  }
 
-        {/* Like button overlay - Fixed position */}
-        <View style={styles.likeContainer}>
-          <TouchableOpacity style={styles.imageLikeButton} onPress={handleLike}>
-            <Text style={styles.imageLikeIcon}>
-              {liked ? '❤️' : '🤍'}
-            </Text>
-            <Text style={styles.likeCountText}>{likeCount}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom Artist Info - Fixed at bottom */}
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity 
-            style={styles.artistContainer}
-            onPress={() => {
-              router.push({
-                pathname: '/artist-detail',
-                params: {
-                  artistId: 1,
-                  artistName: artistData.name,
-                  artistAvatar: artistData.avatar
+  const renderFloatingHeader = () => (
+    <View style={styles.floatingHeader}>
+      <TouchableOpacity onPress={handleBack} style={styles.floatingButton}>
+        <Text style={styles.floatingButtonText}>←</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.floatingButton}
+        onPress={() => {
+          Alert.alert(
+            'Share Artwork',
+            'How would you like to share this artwork?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Copy Link', 
+                onPress: () => {
+                  console.log('Artwork link copied');
+                  Alert.alert('Success', 'Artwork link copied to clipboard');
                 }
-              });
-            }}
-          >
-            <Image source={{ uri: artistData.avatar }} style={styles.artistAvatar} />
-            <View style={styles.artistDetails}>
-              <Text style={styles.artistName}>{artistData.name}</Text>
-            </View>
-          </TouchableOpacity>
+              },
+              { 
+                text: 'Save Image', 
+                onPress: () => {
+                  console.log('Saving artwork image');
+                  Alert.alert('Success', 'Artwork saved to gallery');
+                }
+              },
+              { 
+                text: 'Share to Social', 
+                onPress: () => {
+                  console.log('Sharing to social media');
+                  Alert.alert('Share', 'Opening social media...');
+                }
+              }
+            ]
+          );
+        }}
+      >
+        <Text style={styles.floatingButtonText}>⋯</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
-          {/* Follow Button */}
-          <TouchableOpacity 
-            style={[styles.followButton, isFollowing && styles.followingButton]}
-            onPress={handleFollow}
-          >
-            <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
+  const renderLikeButton = () => (
+    <View style={styles.likeContainer}>
+      <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
+        <Text style={styles.likeIcon}>
+          {liked ? '❤️' : '🤍'}
+        </Text>
+        <Text style={styles.likeCountText}>{likeCount}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderArtistInfo = () => (
+    <View style={styles.bottomContainer}>
+      <TouchableOpacity style={styles.artistContainer} onPress={handleArtistPress}>
+        <Image source={{ uri: artistData.avatar }} style={styles.artistAvatar} />
+        <View style={styles.artistDetails}>
+          <Text style={styles.artistName}>{artistData.name}</Text>
         </View>
-      </SafeAreaView>
-    </Modal>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[
+          styles.followButton,
+          isFollowing && styles.followingButton
+        ]}
+        onPress={handleFollow}
+      >
+        <Text style={[
+          styles.followButtonText,
+          isFollowing && styles.followingButtonText
+        ]}>
+          {isFollowing ? 'Following' : 'Follow'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+      
+      {renderFloatingHeader()}
+
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        maximumZoomScale={3.0}
+        minimumZoomScale={1.0}
+        bouncesZoom={true}
+      >
+        <View style={styles.imageWrapper}>
+          <Image 
+            source={{ uri: image as string }} 
+            style={styles.mainImage}
+            resizeMode="contain"
+          />
+        </View>
+      </ScrollView>
+
+      {renderLikeButton()}
+
+      {renderArtistInfo()}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: Colors.background,
   },
-  header: {
+
+  floatingHeader: {
     position: 'absolute',
     top: 50,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    ...Layout.rowSpaceBetween,
+    paddingHorizontal: Layout.spacing.xl,
     zIndex: 1000,
   },
-  headerButton: {
+  floatingButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: Layout.radius.round,
+    backgroundColor: Colors.blackTransparent,
+    ...Layout.columnCenter,
   },
-  headerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
+  floatingButtonText: {
+    ...Typography.h4,
+    color: Colors.text,
   },
+
   scrollContainer: {
     flex: 1,
-    paddingTop: 100, // 顶部按钮空间
-    paddingBottom: 120, // 底部信息空间
+    paddingTop: 100,
+    paddingBottom: 120,
   },
   scrollContentContainer: {
     flexGrow: 1,
@@ -158,9 +225,8 @@ const styles = StyleSheet.create({
   imageWrapper: {
     width: screenWidth,
     minHeight: screenHeight - 220,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    ...Layout.columnCenter,
+    paddingHorizontal: Layout.spacing.xl,
   },
   mainImage: {
     width: screenWidth - 40,
@@ -168,83 +234,77 @@ const styles = StyleSheet.create({
     maxWidth: screenWidth - 40,
     maxHeight: screenHeight - 220,
   },
+
   likeContainer: {
     position: 'absolute',
     bottom: 140,
-    right: 20,
+    right: Layout.spacing.xl,
     zIndex: 999,
   },
-  imageLikeButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
+  likeButton: {
+    ...Layout.columnCenter,
+    backgroundColor: Colors.blackTransparent,
     borderRadius: 30,
     paddingHorizontal: 18,
     paddingVertical: 15,
     minWidth: 60,
   },
-  imageLikeIcon: {
+  likeIcon: {
     fontSize: 28,
     marginBottom: 6,
   },
   likeCountText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...Typography.badge,
+    color: Colors.text,
   },
+
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    backdropFilter: 'blur(15px)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    backgroundColor: Colors.blackTransparent,
+    ...Layout.rowSpaceBetween,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.xl,
     paddingBottom: 35,
   },
   artistContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...Layout.row,
     flex: 1,
   },
   artistAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    ...Layout.avatarLarge,
     marginRight: 15,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: Colors.text,
   },
   artistDetails: {
     flex: 1,
   },
   artistName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h5,
+    color: Colors.text,
   },
+
   followButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: Colors.whiteTransparent,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: Colors.whiteTransparent,
   },
   followingButton: {
     backgroundColor: 'rgba(0,168,255,0.2)',
-    borderColor: '#00A8FF',
+    borderColor: Colors.primary,
   },
   followButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...Typography.buttonSmall,
+    color: Colors.text,
   },
   followingButtonText: {
-    color: '#00A8FF',
+    color: Colors.primary,
   },
 });
 

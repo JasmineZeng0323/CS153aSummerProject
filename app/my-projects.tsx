@@ -1,17 +1,33 @@
-
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import EmptyState from './components/common/EmptyState';
+import Header from './components/common/Header';
+import StatusBadge from './components/common/StatusBadge';
+import { Colors } from './components/styles/Colors';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
+// Unified container style
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0,
+  },
+  header: {
+    paddingTop: 50, // Status bar height
+  },
+};
 
 const MyProjectsPage = () => {
-  // Mock data for user's projects
+  // Mock data for user's projects with recruiting status
   const [projects] = useState([
     {
       id: 1,
@@ -20,12 +36,13 @@ const MyProjectsPage = () => {
       deadline: '2025-07-31',
       daysLeft: 39,
       budget: '$52-22k',
-      status: 'active', // active, completed, cancelled
+      status: 'active',
       applicantCount: 3,
       invitedCount: 1,
       selectedArtistCount: 0,
       description: 'Test project description for graphic design work...',
-      createdAt: '2025-06-22'
+      createdAt: '2025-06-22',
+      isRecruiting: true // 招募中
     },
     {
       id: 2,
@@ -39,7 +56,8 @@ const MyProjectsPage = () => {
       invitedCount: 2,
       selectedArtistCount: 1,
       description: 'Looking for an original character design with anime style...',
-      createdAt: '2025-06-20'
+      createdAt: '2025-06-20',
+      isRecruiting: false // 招募关闭
     },
     {
       id: 3,
@@ -53,28 +71,27 @@ const MyProjectsPage = () => {
       invitedCount: 0,
       selectedArtistCount: 1,
       description: 'Professional logo design for startup company...',
-      createdAt: '2025-06-10'
+      createdAt: '2025-06-10',
+      isRecruiting: false // 已完成项目
+    },
+    {
+      id: 4,
+      title: 'Website Banner Design',
+      category: 'Web Design',
+      deadline: '2025-09-01',
+      daysLeft: 70,
+      budget: '$150-400',
+      status: 'active',
+      applicantCount: 0,
+      invitedCount: 0,
+      selectedArtistCount: 0,
+      description: 'Modern banner design for company website...',
+      createdAt: '2025-06-24',
+      isRecruiting: true // 招募中
     }
   ]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active': return '#4CAF50';
-      case 'completed': return '#2196F3';
-      case 'cancelled': return '#FF5722';
-      default: return '#888';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'active': return 'Active';
-      case 'completed': return 'Completed';
-      case 'cancelled': return 'Cancelled';
-      default: return 'Unknown';
-    }
-  };
-
+  // Handle project card press
   const handleProjectPress = (project) => {
     router.push({
       pathname: '/project-detail',
@@ -88,210 +105,325 @@ const MyProjectsPage = () => {
         applicantCount: project.applicantCount,
         invitedCount: project.invitedCount,
         selectedArtistCount: project.selectedArtistCount,
-        description: project.description
+        description: project.description,
+        isRecruiting: project.isRecruiting
       }
     });
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Projects</Text>
-        <View style={styles.placeholder} />
+  // Get recruiting status badge
+  const getRecruitingStatusBadge = (project) => {
+    if (project.status === 'completed') {
+      return (
+        <StatusBadge 
+          status="completed"
+          text="Completed"
+          size="small"
+        />
+      );
+    } else if (project.status === 'cancelled') {
+      return (
+        <StatusBadge 
+          status="cancelled"
+          text="Cancelled"
+          size="small"
+        />
+      );
+    } else {
+      return (
+        <StatusBadge 
+          status={project.isRecruiting ? "active" : "unavailable"}
+          text={project.isRecruiting ? "Recruiting" : "Recruiting Closed"}
+          size="small"
+        />
+      );
+    }
+  };
+
+  // Render project card in traditional list style (image 2)
+  const renderProjectCard = (project) => (
+    <TouchableOpacity
+      key={project.id}
+      style={styles.projectCard}
+      onPress={() => handleProjectPress(project)}
+    >
+      <View style={styles.projectHeader}>
+        <View style={styles.projectInfo}>
+          <View style={styles.titleRow}>
+            <Text style={styles.projectTitle}>{project.title}</Text>
+            {getRecruitingStatusBadge(project)}
+          </View>
+          <View style={styles.projectMeta}>
+            <Text style={styles.projectCategory}>📐 {project.category}</Text>
+            {/* 如果招募关闭且项目还在进行中，显示额外提示 */}
+            {!project.isRecruiting && project.status === 'active' && (
+              <View style={styles.hiddenIndicator}>
+                <Text style={styles.hiddenText}>👁️‍🗨️ Hidden from artists</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.projectDescription} numberOfLines={2}>
+            {project.description}
+          </Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Projects List */}
-        {projects.map((project) => (
-          <TouchableOpacity
-            key={project.id}
-            style={styles.projectCard}
-            onPress={() => handleProjectPress(project)}
-          >
-            <View style={styles.projectHeader}>
-              <View style={styles.projectInfo}>
-                <Text style={styles.projectTitle}>{project.title}</Text>
-                <View style={styles.projectMeta}>
-                  <Text style={styles.projectCategory}>📐 {project.category}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(project.status) }]}>
-                    <Text style={styles.statusText}>{getStatusText(project.status)}</Text>
-                  </View>
-                </View>
-                <Text style={styles.projectDescription} numberOfLines={2}>
-                  {project.description}
-                </Text>
-              </View>
+      <View style={styles.projectDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Budget:</Text>
+          <Text style={styles.detailValue}>{project.budget}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Deadline:</Text>
+          <Text style={styles.detailValue}>{project.deadline} ({project.daysLeft} days left)</Text>
+        </View>
+      </View>
+
+      {/* Artist Stats */}
+      <View style={styles.artistStats}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{project.applicantCount}</Text>
+          <Text style={styles.statLabel}>Applicants</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{project.invitedCount}</Text>
+          <Text style={styles.statLabel}>Invited</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{project.selectedArtistCount}</Text>
+          <Text style={styles.statLabel}>Selected</Text>
+        </View>
+      </View>
+
+      <Text style={styles.chevron}>›</Text>
+    </TouchableOpacity>
+  );
+
+  // 按招募状态分组项目
+  const recruitingProjects = projects.filter(p => p.isRecruiting && p.status === 'active');
+  const closedProjects = projects.filter(p => !p.isRecruiting || p.status !== 'active');
+
+  return (
+    <View style={AppStyles.container}>
+      {/* Header using common Header component with unified padding */}
+      <Header 
+        title="My Projects" 
+        showBackButton={true}
+        onBackPress={() => router.back()}
+        style={AppStyles.header}
+      />
+
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Projects Summary */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Project Overview</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryNumber}>{recruitingProjects.length}</Text>
+              <Text style={styles.summaryLabel}>Recruiting</Text>
             </View>
-
-            <View style={styles.projectDetails}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Budget:</Text>
-                <Text style={styles.detailValue}>{project.budget}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Deadline:</Text>
-                <Text style={styles.detailValue}>{project.deadline} ({project.daysLeft} days left)</Text>
-              </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryNumber}>{closedProjects.length}</Text>
+              <Text style={styles.summaryLabel}>Closed/Completed</Text>
             </View>
-
-            {/* Artist Stats */}
-            <View style={styles.artistStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{project.applicantCount}</Text>
-                <Text style={styles.statLabel}>Applicants</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{project.invitedCount}</Text>
-                <Text style={styles.statLabel}>Invited</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{project.selectedArtistCount}</Text>
-                <Text style={styles.statLabel}>Selected</Text>
-              </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryNumber}>{projects.length}</Text>
+              <Text style={styles.summaryLabel}>Total</Text>
             </View>
+          </View>
+        </View>
 
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        ))}
+        {/* Recruiting Projects Section */}
+        {recruitingProjects.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🟢 Currently Recruiting ({recruitingProjects.length})</Text>
+            </View>
+            {recruitingProjects.map((project) => renderProjectCard(project))}
+          </View>
+        )}
 
+        {/* Closed/Completed Projects Section */}
+        {closedProjects.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>📝 Closed & Completed ({closedProjects.length})</Text>
+            </View>
+            {closedProjects.map((project) => renderProjectCard(project))}
+          </View>
+        )}
+
+        {/* Empty state when no projects */}
+        {projects.length === 0 && (
+          <EmptyState
+            icon="📋"
+            title="No Projects Yet"
+            description="You haven't created any projects yet. Start by posting your first project to find talented artists."
+            buttonText="Create Project"
+            onButtonPress={() => router.push('/create-project')}
+            size="medium"
+          />
+        )}
+
+        {/* Bottom padding matching other pages */}
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#FFFFFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  placeholder: {
-    width: 40,
-  },
+  // Content
   content: {
     flex: 1,
   },
-  
-  // Project List Styles
+
+  // Summary Card
+  summaryCard: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.xl,
+    borderRadius: Layout.radius.lg,
+    padding: Layout.spacing.xl,
+  },
+  summaryTitle: {
+    ...Typography.h5,
+    marginBottom: Layout.spacing.lg,
+    textAlign: 'center',
+  },
+  summaryStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryNumber: {
+    ...Typography.h3,
+    color: Colors.primary,
+    marginBottom: Layout.spacing.xs,
+  },
+  summaryLabel: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+  },
+
+  // Section Headers
+  section: {
+    marginBottom: Layout.spacing.xl,
+  },
+  sectionHeader: {
+    paddingHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+  },
+  sectionTitle: {
+    ...Typography.h6,
+    color: Colors.text,
+  },
+
+  // Project List Styles (Traditional style like image 2)
   projectCard: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.surface,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+    borderRadius: Layout.radius.lg,
+    padding: Layout.spacing.xl,
     position: 'relative',
   },
   projectHeader: {
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   projectInfo: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Layout.spacing.sm,
+  },
   projectTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h4,
+    color: Colors.text,
+    flex: 1,
+    marginRight: Layout.spacing.md,
   },
   projectMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
+    flexWrap: 'wrap',
   },
   projectCategory: {
-    fontSize: 14,
-    color: '#888',
-    marginRight: 12,
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
+    marginRight: Layout.spacing.md,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+  hiddenIndicator: {
+    backgroundColor: Colors.warning,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.sm,
+    marginLeft: Layout.spacing.sm,
   },
-  statusText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+  hiddenText: {
+    ...Typography.caption,
+    color: Colors.text,
+    fontSize: 10,
   },
   projectDescription: {
-    fontSize: 14,
-    color: '#CCCCCC',
+    ...Typography.bodyMuted,
     lineHeight: 20,
   },
   projectDetails: {
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   detailRow: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: Layout.spacing.xs,
   },
   detailLabel: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
     width: 80,
   },
   detailValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
+    color: Colors.text,
     flex: 1,
   },
   artistStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingTop: 16,
+    paddingTop: Layout.spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: Colors.border,
   },
   statItem: {
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#00A8FF',
-    marginBottom: 4,
+    ...Typography.h4,
+    color: Colors.primary,
+    marginBottom: Layout.spacing.xs,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
+    color: Colors.textMuted,
   },
   chevron: {
     position: 'absolute',
-    top: 20,
-    right: 20,
+    top: Layout.spacing.xl,
+    right: Layout.spacing.xl,
     fontSize: 20,
-    color: '#888',
+    color: Colors.textMuted,
   },
+
   bottomPadding: {
-    height: 40,
+    height: Layout.spacing.xxxl,
   },
 });
 

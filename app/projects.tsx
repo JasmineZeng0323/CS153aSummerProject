@@ -1,8 +1,6 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Image,
-  Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,17 +8,27 @@ import {
   View
 } from 'react-native';
 
+// Import your component library
+import ProjectCard from './components/common/ProjectCard';
+import StatusBadge from './components/common/StatusBadge';
+import FilterModal, { FilterSection } from './components/forms/FilterModal';
+import { Colors } from './components/styles/Colors';
+import GlobalStyles from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
+
 const ProjectsPage = () => {
   const [activeTab, setActiveTab] = useState('Projects');
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState({
-    verified: false,
-    unclaimed: false,
-    character: false
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({
+    contentType: [],
+    budgetRange: [],
+    clientStatus: [],
+    projectStatus: []
   });
 
-  // Mock data for projects
-  const projectItems = [
+  // Mock data for projects with recruiting status
+  const allProjectItems = [
     {
       id: 1,
       title: 'Long-term OC Project!',
@@ -32,7 +40,12 @@ const ProjectsPage = () => {
       isVerified: true,
       isHighQuality: true,
       image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
-      tags: ['Real Name Verified', 'High Quality']
+      tags: ['Real Name Verified', 'High Quality'],
+      contentType: 'character',
+      budgetRange: '100-500',
+      isClaimed: false,
+      isUrgent: false,
+      isRecruiting: true // 招募中
     },
     {
       id: 2,
@@ -45,7 +58,12 @@ const ProjectsPage = () => {
       isVerified: true,
       isHighQuality: true,
       image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop',
-      tags: ['Real Name Verified', 'High Quality']
+      tags: ['Real Name Verified', 'High Quality'],
+      contentType: 'illustration',
+      budgetRange: 'over5000',
+      isClaimed: false,
+      isUrgent: false,
+      isRecruiting: true // 招募中
     },
     {
       id: 3,
@@ -58,7 +76,12 @@ const ProjectsPage = () => {
       isVerified: false,
       isHighQuality: false,
       image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop',
-      tags: []
+      tags: [],
+      contentType: 'portrait',
+      budgetRange: 'under100',
+      isClaimed: true,
+      isUrgent: true,
+      isRecruiting: false // 招募关闭 - 不会显示在列表中
     },
     {
       id: 4,
@@ -71,135 +94,256 @@ const ProjectsPage = () => {
       isVerified: true,
       isHighQuality: true,
       image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
-      tags: ['Real Name Verified', 'High Quality']
+      tags: ['Real Name Verified', 'High Quality'],
+      contentType: 'character',
+      budgetRange: '1000-5000',
+      isClaimed: false,
+      isUrgent: false,
+      isRecruiting: true // 招募中
+    },
+    {
+      id: 5,
+      title: 'Game Character Design',
+      description: 'Looking for talented artist to create game characters...',
+      budget: '$800-1200',
+      deadline: '2025-09-15',
+      clientName: 'GameDev Studio',
+      clientAvatar: 'https://i.pravatar.cc/60?img=5',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200&h=200&fit=crop',
+      tags: ['Real Name Verified', 'High Quality'],
+      contentType: 'gameArt',
+      budgetRange: '500-1000',
+      isClaimed: false,
+      isUrgent: true,
+      isRecruiting: true // 招募中
+    },
+    {
+      id: 6,
+      title: 'Logo Design for Startup',
+      description: 'Modern logo design needed for tech startup company...',
+      budget: '$150-300',
+      deadline: '2025-07-20',
+      clientName: 'StartupCo',
+      clientAvatar: 'https://i.pravatar.cc/60?img=6',
+      isVerified: false,
+      isHighQuality: false,
+      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
+      tags: [],
+      contentType: 'logo',
+      budgetRange: '100-500',
+      isClaimed: true,
+      isUrgent: false,
+      isRecruiting: false // 招募关闭 - 不会显示在列表中
     }
   ];
 
-  const toggleFilter = (filterKey: string) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      [filterKey]: !prev[filterKey]
-    }));
+  // Practical filter sections for FilterModal
+  const filterSections: FilterSection[] = [
+    {
+      id: 'contentType',
+      title: 'Project Type',
+      multiSelect: true,
+      options: [
+        { id: 'character', title: 'Character', icon: '👤' },
+        { id: 'portrait', title: 'Portrait', icon: '🖼️' },
+        { id: 'illustration', title: 'Illustration', icon: '🎨' },
+        { id: 'logo', title: 'Logo Design', icon: '🔷' },
+        { id: 'gameArt', title: 'Game Art', icon: '🎮' },
+        { id: 'animation', title: 'Animation', icon: '🎬' },
+        { id: 'concept', title: 'Concept Art', icon: '💭' },
+        { id: 'commercial', title: 'Commercial', icon: '💼' }
+      ]
+    },
+    {
+      id: 'budgetRange',
+      title: 'Budget Range',
+      multiSelect: false,
+      options: [
+        { id: 'under100', title: 'Under $100', icon: '💰' },
+        { id: '100-500', title: '$100 - $500', icon: '💰' },
+        { id: '500-1000', title: '$500 - $1K', icon: '💰' },
+        { id: '1000-5000', title: '$1K - $5K', icon: '💰' },
+        { id: 'over5000', title: 'Over $5K', icon: '💰' }
+      ]
+    },
+    {
+      id: 'clientStatus',
+      title: 'Client Status',
+      multiSelect: true,
+      options: [
+        { id: 'verified', title: 'Verified Only', icon: '✅' },
+        { id: 'highQuality', title: 'High Quality', icon: '⭐' },
+        { id: 'newClient', title: 'New Client', icon: '🆕' },
+        { id: 'returningClient', title: 'Returning', icon: '🔄' }
+      ]
+    },
+    {
+      id: 'projectStatus',
+      title: 'Project Status',
+      multiSelect: true,
+      options: [
+        { id: 'unclaimed', title: 'Available', icon: '🟢' },
+        { id: 'urgent', title: 'Urgent', icon: '🔴' },
+        { id: 'featured', title: 'Featured', icon: '⭐' },
+        { id: 'expiringSoon', title: 'Expiring Soon', icon: '⏰' }
+      ]
+    }
+  ];
+
+  // Quick filter state management - add character filter
+  const [quickFilters, setQuickFilters] = useState({
+    verified: false,
+    unclaimed: false,
+    character: false // Add character filter
+  });
+
+  const toggleQuickFilter = (filterKey: string) => {
+    console.log(`Toggling filter: ${filterKey}`); // Debug log
+    setQuickFilters(prev => {
+      const newState = {
+        ...prev,
+        [filterKey]: !prev[filterKey]
+      };
+      console.log('New filter state:', newState); // Debug log
+      return newState;
+    });
   };
 
-  const FilterModal = () => (
-    <Modal
-      visible={showFilterModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowFilterModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filter Projects</Text>
-            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Text style={styles.closeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
+  // Filter function to apply all filters including recruiting status
+  const getFilteredProjects = () => {
+    let filtered = allProjectItems;
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Verification Status</Text>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilters.verified && styles.selectedFilter]}
-              onPress={() => toggleFilter('verified')}
-            >
-              <View style={styles.filterOptionLeft}>
-                <Text style={styles.filterIcon}>🏢</Text>
-                <Text style={styles.filterText}>Verified Clients Only</Text>
-              </View>
-              <View style={[styles.checkbox, selectedFilters.verified && styles.checkboxSelected]} />
-            </TouchableOpacity>
-          </View>
+    // 🎯 首先过滤掉招募关闭的项目 - 这是关键！
+    filtered = filtered.filter(project => project.isRecruiting === true);
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Project Status</Text>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilters.unclaimed && styles.selectedFilter]}
-              onPress={() => toggleFilter('unclaimed')}
-            >
-              <View style={styles.filterOptionLeft}>
-                <Text style={styles.filterIcon}>✅</Text>
-                <Text style={styles.filterText}>Unclaimed Only</Text>
-              </View>
-              <View style={[styles.checkbox, selectedFilters.unclaimed && styles.checkboxSelected]} />
-            </TouchableOpacity>
-          </View>
+    // Apply quick filters
+    if (quickFilters.verified) {
+      filtered = filtered.filter(project => project.isVerified);
+    }
+    
+    if (quickFilters.unclaimed) {
+      filtered = filtered.filter(project => !project.isClaimed);
+    }
+    
+    if (quickFilters.character) {
+      filtered = filtered.filter(project => project.contentType === 'character');
+    }
 
-          <View style={styles.filterSection}>
-            <Text style={styles.filterSectionTitle}>Content Type</Text>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedFilters.character && styles.selectedFilter]}
-              onPress={() => toggleFilter('character')}
-            >
-              <View style={styles.filterOptionLeft}>
-                <Text style={styles.filterIcon}>👤</Text>
-                <Text style={styles.filterText}>Character Design</Text>
-              </View>
-              <View style={[styles.checkbox, selectedFilters.character && styles.checkboxSelected]} />
-            </TouchableOpacity>
-          </View>
+    // Apply modal filters
+    if (selectedFilters.contentType && selectedFilters.contentType.length > 0) {
+      filtered = filtered.filter(project => 
+        selectedFilters.contentType.includes(project.contentType)
+      );
+    }
 
-          <View style={styles.modalButtons}>
-            <TouchableOpacity 
-              style={styles.resetButton}
-              onPress={() => setSelectedFilters({ verified: false, unclaimed: false, character: false })}
-            >
-              <Text style={styles.resetButtonText}>Reset</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.applyButton}
-              onPress={() => setShowFilterModal(false)}
-            >
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
+    if (selectedFilters.budgetRange && selectedFilters.budgetRange.length > 0) {
+      filtered = filtered.filter(project => 
+        selectedFilters.budgetRange.includes(project.budgetRange)
+      );
+    }
 
-  const renderProjectItem = (item: any) => (
-    <TouchableOpacity key={item.id} style={styles.projectCard}>
-      <View style={styles.projectHeader}>
-        <View style={styles.projectInfo}>
-          <Text style={styles.projectTitle}>{item.title}</Text>
-          <Text style={styles.projectDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-          
-          {/* Tags */}
-          {item.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {item.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-          
-          <View style={styles.projectDetails}>
-            <Text style={styles.budget}>{item.budget}</Text>
-            <Text style={styles.deadline}>{item.deadline} Deadline</Text>
-          </View>
-        </View>
+    if (selectedFilters.clientStatus && selectedFilters.clientStatus.length > 0) {
+      filtered = filtered.filter(project => {
+        if (selectedFilters.clientStatus.includes('verified') && !project.isVerified) return false;
+        if (selectedFilters.clientStatus.includes('highQuality') && !project.isHighQuality) return false;
+        return true;
+      });
+    }
+
+    if (selectedFilters.projectStatus && selectedFilters.projectStatus.length > 0) {
+      filtered = filtered.filter(project => {
+        if (selectedFilters.projectStatus.includes('unclaimed') && project.isClaimed) return false;
+        if (selectedFilters.projectStatus.includes('urgent') && !project.isUrgent) return false;
+        return true;
+      });
+    }
+
+    return filtered;
+  };
+
+  // Filter handlers for FilterModal
+  const handleFilterChange = (sectionId: string, optionId: string, isSelected: boolean) => {
+    setSelectedFilters(prev => {
+      const newFilters = { ...prev };
+      
+      if (sectionId === 'budgetRange') {
+        // Single select for budget
+        newFilters[sectionId] = isSelected ? [optionId] : [];
+      } else {
+        // Multi-select for other filters
+        if (!newFilters[sectionId]) newFilters[sectionId] = [];
         
-        <View style={styles.projectImageContainer}>
-          <Image source={{ uri: item.image }} style={styles.projectImage} />
-          <View style={styles.projectActions}>
-            <TouchableOpacity style={styles.actionButton}>
-              <Text style={styles.actionIcon}>📋</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+        if (isSelected) {
+          newFilters[sectionId].push(optionId);
+        } else {
+          newFilters[sectionId] = newFilters[sectionId].filter(id => id !== optionId);
+        }
+      }
+      
+      return newFilters;
+    });
+  };
+
+  const handleFilterReset = () => {
+    setSelectedFilters({
+      contentType: [],
+      budgetRange: [],
+      clientStatus: [],
+      projectStatus: []
+    });
+    setQuickFilters({
+      verified: false,
+      unclaimed: false,
+      character: false
+    });
+  };
+
+  const handleFilterApply = () => {
+    setShowFilterModal(false);
+    
+    // Update quick filters based on modal selections
+    setQuickFilters({
+      verified: selectedFilters.clientStatus?.includes('verified') || false,
+      unclaimed: selectedFilters.projectStatus?.includes('unclaimed') || false,
+      character: selectedFilters.contentType?.includes('character') || false
+    });
+  };
+
+  const handleProjectPress = (project: any) => {
+    // 导航到项目详情页，传递招募状态
+    router.push({
+      pathname: '/project-detail',
+      params: {
+        projectId: project.id,
+        title: project.title,
+        category: project.contentType,
+        deadline: project.deadline,
+        budget: project.budget,
+        status: 'active',
+        applicantCount: Math.floor(Math.random() * 10) + 1,
+        invitedCount: Math.floor(Math.random() * 3),
+        selectedArtistCount: 0,
+        description: project.description,
+        isRecruiting: project.isRecruiting
+      }
+    });
+  };
+
+  const handleProjectAction = (projectId: number) => {
+    console.log('Project action:', projectId);
+    // Handle project action (bookmark, etc.)
+  };
+
+  // 获取过滤后的项目数量用于调试
+  const filteredProjects = getFilteredProjects();
+  const recruitingProjectsCount = allProjectItems.filter(p => p.isRecruiting).length;
+  const totalProjectsCount = allProjectItems.length;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <View style={GlobalStyles.container}>
+      {/* Header - 与其他页面保持完全一致的布局 */}
       <View style={styles.header}>
         <View style={styles.headerTabs}>
           <TouchableOpacity
@@ -220,12 +364,13 @@ const ProjectsPage = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.betaTab}>
             <Text style={styles.betaText}>Character</Text>
-            <View style={styles.betaBadge}>
-              <Text style={styles.betaBadgeText}>Beta</Text>
-            </View>
+            <StatusBadge status="active" text="Beta" size="small" />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push('/post-project')}
+        >
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -238,377 +383,292 @@ const ProjectsPage = () => {
         </View>
       </View>
 
-      {/* Filter Buttons */}
+      {/* 显示招募状态信息（开发调试用，可以删除） */}
+      <View style={styles.debugInfo}>
+        <Text style={styles.debugText}>
+          Showing {filteredProjects.length} projects (Recruiting: {recruitingProjectsCount}/{totalProjectsCount})
+        </Text>
+      </View>
+
+      {/* Filter Buttons - Final layout with proper text handling */}
       <View style={styles.filterContainer}>
         <TouchableOpacity
-          style={[styles.filterButton, selectedFilters.verified && styles.activeFilterButton]}
-          onPress={() => toggleFilter('verified')}
+          style={[styles.filterButton, quickFilters.verified && styles.activeFilterButton]}
+          onPress={() => toggleQuickFilter('verified')}
         >
           <Text style={styles.filterIcon}>🏢</Text>
-          <Text style={[styles.filterButtonText, selectedFilters.verified && styles.activeFilterText]}>
-            Verified Only
+          <Text 
+            style={[styles.filterButtonText, quickFilters.verified && styles.activeFilterText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+          >
+            Verified
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.filterButton, selectedFilters.unclaimed && styles.activeFilterButton]}
-          onPress={() => toggleFilter('unclaimed')}
+          style={[styles.filterButton, quickFilters.unclaimed && styles.activeFilterButton]}
+          onPress={() => toggleQuickFilter('unclaimed')}
         >
           <Text style={styles.filterIcon}>✅</Text>
-          <Text style={[styles.filterButtonText, selectedFilters.unclaimed && styles.activeFilterText]}>
-            Unclaimed Only
+          <Text 
+            style={[styles.filterButtonText, quickFilters.unclaimed && styles.activeFilterText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+          >
+            Unclaimed
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.filterButton, selectedFilters.character && styles.activeFilterButton]}
-          onPress={() => toggleFilter('character')}
+          style={[styles.filterButton, quickFilters.character && styles.activeFilterButton]}
+          onPress={() => toggleQuickFilter('character')}
         >
           <Text style={styles.filterIcon}>👤</Text>
-          <Text style={[styles.filterButtonText, selectedFilters.character && styles.activeFilterText]}>
+          <Text 
+            style={[styles.filterButtonText, quickFilters.character && styles.activeFilterText]}
+            numberOfLines={1}
+            adjustsFontSizeToFit={true}
+          >
             Character
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={styles.moreFiltersButton}
+          style={[
+            styles.moreFiltersButton,
+            (Object.values(selectedFilters).some(arr => arr.length > 0)) && styles.activeFilterButton
+          ]}
           onPress={() => setShowFilterModal(true)}
         >
-          <Text style={styles.filterIcon}>🔽</Text>
+          <Text style={styles.moreFiltersIcon}>🔽</Text>
         </TouchableOpacity>
       </View>
 
       {/* Projects List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.projectsList}>
-          {projectItems.map((item) => renderProjectItem(item))}
+          {filteredProjects.map((item) => (
+            <ProjectCard
+              key={item.id}
+              id={item.id}
+              title={item.title}
+              description={item.description}
+              budget={item.budget}
+              deadline={item.deadline}
+              clientName={item.clientName}
+              clientAvatar={item.clientAvatar}
+              isVerified={item.isVerified}
+              isHighQuality={item.isHighQuality}
+              image={item.image}
+              tags={item.tags}
+              onPress={handleProjectPress}
+              onActionPress={handleProjectAction}
+            />
+          ))}
+          
+          {/* 如果没有招募中的项目，显示提示 */}
+          {filteredProjects.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>📋</Text>
+              <Text style={styles.emptyTitle}>No projects available</Text>
+              <Text style={styles.emptyDescription}>
+                No projects are currently recruiting. Check back later for new opportunities!
+              </Text>
+            </View>
+          )}
         </View>
-        <View style={styles.bottomPadding} />
+        <View style={GlobalStyles.bottomPadding} />
       </ScrollView>
 
-      <FilterModal />
-    </SafeAreaView>
+      <FilterModal
+        visible={showFilterModal}
+        title="Filter Projects"
+        sections={filterSections}
+        selectedFilters={selectedFilters}
+        onFilterChange={handleFilterChange}
+        onReset={handleFilterReset}
+        onApply={handleFilterApply}
+        onClose={() => setShowFilterModal(false)}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
+  // Header - 与其他页面保持完全一致
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingHorizontal: Layout.spacing.xxl,
+    paddingTop: 50, // 🎯 关键！与其他页面一致的状态栏高度
+    paddingBottom: Layout.spacing.lg,
   },
   headerTabs: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
   },
   headerTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    marginRight: Layout.spacing.sm,
   },
   activeHeaderTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#00A8FF',
+    borderBottomColor: Colors.primary,
   },
   headerTabText: {
-    fontSize: 18,
+    ...Typography.bodyLarge,
     fontWeight: 'bold',
-    color: '#888',
+    color: Colors.textMuted,
   },
   activeHeaderTabText: {
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   betaTab: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    gap: Layout.spacing.sm,
   },
   betaText: {
-    fontSize: 18,
+    ...Typography.bodyLarge,
     fontWeight: 'bold',
-    color: '#888',
-    marginRight: 8,
-  },
-  betaBadge: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  betaBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: Colors.textMuted,
   },
   addButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00A8FF',
+    borderRadius: Layout.radius.xl,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButtonText: {
-    fontSize: 24,
-    color: '#FFFFFF',
+    ...Typography.h3,
+    color: Colors.text,
     fontWeight: 'bold',
   },
+
+  // Search Bar
   searchContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    ...Layout.paddingHorizontal,
+    marginBottom: Layout.spacing.lg,
   },
   searchBar: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.xxl,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
+    ...Layout.row,
     alignItems: 'center',
   },
   searchIcon: {
     fontSize: 16,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
   },
   searchPlaceholder: {
-    color: '#666',
-    fontSize: 16,
+    ...Typography.body,
+    color: Colors.textDisabled,
   },
+
+  // Debug Info (可以删除)
+  debugInfo: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.md,
+    padding: Layout.spacing.sm,
+    borderRadius: Layout.radius.md,
+  },
+  debugText: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+
+  // Filter Buttons - Final fix for text wrapping and selection
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: Layout.spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   filterButton: {
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 6,
+    paddingVertical: 12,
     borderRadius: 20,
-    marginRight: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '22%', // Fixed width to prevent overlap
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeFilterButton: {
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterIcon: {
-    fontSize: 14,
-    marginRight: 6,
+    fontSize: 11,
+    marginRight: 2,
   },
   filterButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 10,
+    color: Colors.text,
+    fontWeight: '500',
+    textAlign: 'center',
+    numberOfLines: 1,
   },
   activeFilterText: {
-    color: '#FFFFFF',
     fontWeight: 'bold',
+    color: Colors.text,
   },
   moreFiltersButton: {
-    backgroundColor: '#1A1A1A',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '10%',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
+  moreFiltersIcon: {
+    fontSize: 12,
+    color: Colors.text,
+  },
+
+  // Content
   content: {
     flex: 1,
   },
   projectsList: {
-    paddingHorizontal: 24,
+    ...Layout.paddingHorizontal,
   },
-  projectCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: Layout.spacing.xxxl,
   },
-  projectHeader: {
-    flexDirection: 'row',
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: Layout.spacing.lg,
   },
-  projectInfo: {
-    flex: 1,
-    marginRight: 16,
+  emptyTitle: {
+    ...Typography.h4,
+    marginBottom: Layout.spacing.md,
+    textAlign: 'center',
   },
-  projectTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  projectDescription: {
-    fontSize: 14,
-    color: '#CCCCCC',
+  emptyDescription: {
+    ...Typography.bodyMuted,
+    textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 12,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  tag: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  tagText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  projectDetails: {
-    flexDirection: 'column',
-  },
-  budget: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 4,
-  },
-  deadline: {
-    fontSize: 14,
-    color: '#888',
-  },
-  projectImageContainer: {
-    position: 'relative',
-  },
-  projectImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-  },
-  projectActions: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionIcon: {
-    fontSize: 16,
-  },
-  bottomPadding: {
-    height: 100,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#0A0A0A',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  closeButton: {
-    fontSize: 20,
-    color: '#888',
-  },
-  filterSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
-  },
-  filterOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#1A1A1A',
-    marginBottom: 8,
-  },
-  selectedFilter: {
-    backgroundColor: '#2A2A3A',
-  },
-  filterOptionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  filterText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginLeft: 12,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#666',
-  },
-  checkboxSelected: {
-    backgroundColor: '#00A8FF',
-    borderColor: '#00A8FF',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-  },
-  resetButton: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  applyButton: {
-    flex: 2,
-    backgroundColor: '#00A8FF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    paddingHorizontal: Layout.spacing.xl,
   },
 });
 

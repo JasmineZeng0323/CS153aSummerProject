@@ -1,19 +1,31 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import Header from './components/common/Header';
+import StatusBadge from './components/common/StatusBadge';
+import { Colors } from './components/styles/Colors';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
 
-const { width: screenWidth } = Dimensions.get('window');
+// Unified container style
+const AppStyles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: 0,
+  },
+  header: {
+    paddingTop: 50, // Status bar height
+  },
+};
 
 const OrderDetailPage = () => {
   const params = useLocalSearchParams();
@@ -31,8 +43,6 @@ const OrderDetailPage = () => {
   } = params;
 
   const [activeTab, setActiveTab] = useState('Overview');
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [selectedImage, setSelectedImage] = useState('');
 
   // Mock detailed order data
   const orderData = {
@@ -69,14 +79,6 @@ const OrderDetailPage = () => {
         size: '5.8 MB',
         format: 'PNG',
         resolution: '4000x4000'
-      },
-      {
-        id: 3,
-        name: 'Process_Sketch.jpg',
-        url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop',
-        size: '1.2 MB',
-        format: 'JPG',
-        resolution: '1500x1500'
       }
     ],
     timeline: [
@@ -89,27 +91,6 @@ const OrderDetailPage = () => {
       },
       {
         id: 2,
-        stage: 'Artist Accepted',
-        date: '2025-06-20 15:45',
-        status: 'completed',
-        description: 'Artist accepted the commission and started working'
-      },
-      {
-        id: 3,
-        stage: 'Sketch Phase',
-        date: '2025-06-21 10:20',
-        status: 'completed',
-        description: 'Initial sketch completed and approved by client'
-      },
-      {
-        id: 4,
-        stage: 'Final Artwork',
-        date: '2025-06-22 16:15',
-        status: 'completed',
-        description: 'Final artwork completed and delivered'
-      },
-      {
-        id: 5,
         stage: 'Order Completed',
         date: '2025-06-22 16:30',
         status: 'completed',
@@ -120,11 +101,8 @@ const OrderDetailPage = () => {
       type: 'Portrait',
       style: 'Anime/Manga',
       resolution: '2000x2000px, 4000x4000px',
-      format: 'PNG, JPG',
-      colorMode: 'RGB',
-      deliveryTime: '3 hours',
-      revisions: '2 minor revisions included',
-      usage: 'Personal use only'
+      format: 'PNG',
+      deliveryTime: '3 hours'
     },
     paymentInfo: {
       subtotal: price || '157',
@@ -135,32 +113,7 @@ const OrderDetailPage = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return '#4CAF50';
-      case 'in_progress': return '#FF9800';
-      case 'delivered': return '#2196F3';
-      case 'cancelled': return '#FF5722';
-      default: return '#888';
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      case 'delivered': return 'Delivered';
-      case 'cancelled': return 'Cancelled';
-      default: return 'Unknown';
-    }
-  };
-
-  const handleImagePress = (imageUrl) => {
-    setSelectedImage(imageUrl);
-    setShowImageModal(true);
-  };
-
-  const handleDownloadFile = (file) => {
+  const handleDownloadFile = (file: any) => {
     Alert.alert(
       'Download File',
       `Download ${file.name}?`,
@@ -188,19 +141,6 @@ const OrderDetailPage = () => {
     });
   };
 
-  const handleReportIssue = () => {
-    Alert.alert(
-      'Report Issue',
-      'What type of issue would you like to report?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Quality Issue', onPress: () => console.log('Quality issue reported') },
-        { text: 'Delivery Issue', onPress: () => console.log('Delivery issue reported') },
-        { text: 'Other', onPress: () => console.log('Other issue reported') }
-      ]
-    );
-  };
-
   const handleWriteReview = () => {
     router.push({
       pathname: '/write-review',
@@ -212,14 +152,55 @@ const OrderDetailPage = () => {
     });
   };
 
+  // Share button component with functionality
+  const ShareButton = () => {
+    const handleShare = () => {
+      Alert.alert(
+        'Share Order',
+        'How would you like to share this order?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Copy Link', 
+            onPress: () => {
+              console.log('Order link copied to clipboard');
+              Alert.alert('Success', 'Order link copied to clipboard');
+            }
+          },
+          { 
+            text: 'Share Image', 
+            onPress: () => {
+              console.log('Sharing order image');
+              Alert.alert('Share', 'Sharing order artwork...');
+            }
+          },
+          { 
+            text: 'Share Details', 
+            onPress: () => {
+              console.log('Sharing order details');
+              Alert.alert('Share', 'Sharing order details...');
+            }
+          }
+        ]
+      );
+    };
+
+    return (
+      <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+        <Text style={styles.shareIcon}>📤</Text>
+      </TouchableOpacity>
+    );
+  };
+
   const renderOverviewTab = () => (
     <View style={styles.tabContent}>
       {/* Order Status */}
       <View style={styles.statusCard}>
         <View style={styles.statusHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(orderData.status) }]}>
-            <Text style={styles.statusText}>{getStatusText(orderData.status)}</Text>
-          </View>
+          <StatusBadge 
+            status={orderData.status as any} 
+            size="medium"
+          />
           <Text style={styles.completedDate}>
             Completed: {orderData.completedDate}
           </Text>
@@ -248,18 +229,6 @@ const OrderDetailPage = () => {
           <Text style={styles.detailValue}>{orderData.orderNumber}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Category:</Text>
-          <Text style={styles.detailValue}>{orderData.category}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Purchase Date:</Text>
-          <Text style={styles.detailValue}>{orderData.purchaseDate}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Deadline:</Text>
-          <Text style={styles.detailValue}>{orderData.deadline}</Text>
-        </View>
-        <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Total Amount:</Text>
           <Text style={[styles.detailValue, styles.priceValue]}>${orderData.paymentInfo.total}</Text>
         </View>
@@ -271,10 +240,6 @@ const OrderDetailPage = () => {
           <Text style={styles.actionIcon}>⭐</Text>
           <Text style={styles.actionText}>Write Review</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={handleReportIssue}>
-          <Text style={styles.actionIcon}>⚠️</Text>
-          <Text style={styles.actionText}>Report Issue</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -285,13 +250,7 @@ const OrderDetailPage = () => {
       
       {orderData.deliveredFiles.map((file) => (
         <View key={file.id} style={styles.fileCard}>
-          <TouchableOpacity 
-            style={styles.filePreview}
-            onPress={() => handleImagePress(file.url)}
-          >
-            <Image source={{ uri: file.url }} style={styles.fileImage} />
-          </TouchableOpacity>
-          
+          <Image source={{ uri: file.url }} style={styles.fileImage} />
           <View style={styles.fileInfo}>
             <Text style={styles.fileName}>{file.name}</Text>
             <Text style={styles.fileSpecs}>
@@ -308,97 +267,30 @@ const OrderDetailPage = () => {
           </View>
         </View>
       ))}
-
-      <View style={styles.downloadAllContainer}>
-        <TouchableOpacity style={styles.downloadAllButton}>
-          <Text style={styles.downloadAllText}>📦 Download All Files</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 
-  const renderTimelineTab = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Order Timeline</Text>
-      
-      {orderData.timeline.map((item, index) => (
-        <View key={item.id} style={styles.timelineItem}>
-          <View style={styles.timelineLeft}>
-            <View style={[
-              styles.timelineIndicator,
-              item.status === 'completed' && styles.timelineIndicatorCompleted
-            ]}>
-              {item.status === 'completed' && <Text style={styles.timelineCheck}>✓</Text>}
-            </View>
-            {index < orderData.timeline.length - 1 && (
-              <View style={styles.timelineLine} />
-            )}
-          </View>
-          
-          <View style={styles.timelineContent}>
-            <Text style={styles.timelineStage}>{item.stage}</Text>
-            <Text style={styles.timelineDate}>{item.date}</Text>
-            <Text style={styles.timelineDescription}>{item.description}</Text>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderSpecsTab = () => (
-    <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Specifications</Text>
-      
-      <View style={styles.specsCard}>
-        {Object.entries(orderData.specifications).map(([key, value]) => (
-          <View key={key} style={styles.specRow}>
-            <Text style={styles.specLabel}>
-              {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}:
-            </Text>
-            <Text style={styles.specValue}>{value}</Text>
-          </View>
-        ))}
-      </View>
-
-      <Text style={styles.tabTitle}>Payment Information</Text>
-      
-      <View style={styles.specsCard}>
-        <View style={styles.specRow}>
-          <Text style={styles.specLabel}>Subtotal:</Text>
-          <Text style={styles.specValue}>${orderData.paymentInfo.subtotal}</Text>
-        </View>
-        <View style={styles.specRow}>
-          <Text style={styles.specLabel}>Platform Fee:</Text>
-          <Text style={styles.specValue}>${orderData.paymentInfo.platformFee}</Text>
-        </View>
-        <View style={[styles.specRow, styles.totalRow]}>
-          <Text style={styles.totalLabel}>Total:</Text>
-          <Text style={styles.totalValue}>${orderData.paymentInfo.total}</Text>
-        </View>
-        <View style={styles.specRow}>
-          <Text style={styles.specLabel}>Payment Method:</Text>
-          <Text style={styles.specValue}>{orderData.paymentInfo.paymentMethod}</Text>
-        </View>
-        <View style={styles.specRow}>
-          <Text style={styles.specLabel}>Transaction ID:</Text>
-          <Text style={styles.specValue}>{orderData.paymentInfo.transactionId}</Text>
-        </View>
-      </View>
-    </View>
-  );
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'Overview':
+        return renderOverviewTab();
+      case 'Files':
+        return renderFilesTab();
+      default:
+        return renderOverviewTab();
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
-        <TouchableOpacity style={styles.shareButton}>
-          <Text style={styles.shareIcon}>📤</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={AppStyles.container}>
+      {/* Header using common Header component */}
+      <Header 
+        title="Order Details" 
+        showBackButton={true}
+        onBackPress={() => router.back()}
+        rightElement={<ShareButton />}
+        style={AppStyles.header}
+      />
 
       {/* Order Header */}
       <View style={styles.orderHeader}>
@@ -411,7 +303,7 @@ const OrderDetailPage = () => {
 
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
-        {['Overview', 'Files', 'Timeline', 'Specs'].map((tab) => (
+        {['Overview', 'Files'].map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
@@ -426,63 +318,15 @@ const OrderDetailPage = () => {
 
       {/* Tab Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'Overview' && renderOverviewTab()}
-        {activeTab === 'Files' && renderFilesTab()}
-        {activeTab === 'Timeline' && renderTimelineTab()}
-        {activeTab === 'Specs' && renderSpecsTab()}
+        {renderTabContent()}
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      {/* Image Modal */}
-      <Modal
-        visible={showImageModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowImageModal(false)}
-      >
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity 
-            style={styles.imageModalClose}
-            onPress={() => setShowImageModal(false)}
-          >
-            <Text style={styles.imageModalCloseText}>✕</Text>
-          </TouchableOpacity>
-          <Image source={{ uri: selectedImage }} style={styles.modalImage} resizeMode="contain" />
-        </View>
-      </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#FFFFFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
+  // Share button
   shareButton: {
     width: 40,
     height: 40,
@@ -497,55 +341,49 @@ const styles = StyleSheet.create({
   orderHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.lg,
+    ...Layout.borderBottom,
   },
   orderImage: {
     width: 80,
     height: 80,
-    borderRadius: 12,
-    marginRight: 16,
+    borderRadius: Layout.radius.md,
+    marginRight: Layout.spacing.lg,
   },
   orderInfo: {
     flex: 1,
   },
   orderTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.sm,
   },
   orderPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B35',
+    ...Typography.price,
   },
 
   // Tab Navigation
   tabNavigation: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    ...Layout.borderBottom,
   },
   tabButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 8,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    marginRight: Layout.spacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   activeTabButton: {
-    borderBottomColor: '#00A8FF',
+    borderBottomColor: Colors.primary,
   },
   tabButtonText: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
   },
   activeTabButtonText: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
 
@@ -554,77 +392,58 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.lg,
   },
   tabTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.lg,
   },
 
-  // Overview Tab
+  // Cards
   statusCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    ...Layout.card,
+    marginBottom: Layout.spacing.lg,
   },
   statusHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   completedDate: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
 
   artistCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    ...Layout.card,
+    marginBottom: Layout.spacing.lg,
   },
   artistInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   artistAvatar: {
+    ...Layout.avatar,
     width: 50,
     height: 50,
     borderRadius: 25,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
   },
   artistDetails: {
     flex: 1,
   },
   artistName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.xs,
   },
   artistRating: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
   contactButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00A8FF',
+    borderRadius: Layout.radius.xl,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -633,249 +452,92 @@ const styles = StyleSheet.create({
   },
 
   detailsCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    ...Layout.card,
+    marginBottom: Layout.spacing.lg,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.md,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
   },
   detailLabel: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
   detailValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
     textAlign: 'right',
     flex: 1,
-    marginLeft: 16,
+    marginLeft: Layout.spacing.lg,
   },
   priceValue: {
-    color: '#FF6B35',
+    color: Colors.secondary,
     fontWeight: 'bold',
   },
 
   actionsCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
+    ...Layout.card,
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
   actionButton: {
     alignItems: 'center',
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: Layout.spacing.sm,
   },
   actionIcon: {
     fontSize: 24,
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
   },
   actionText: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
   },
 
   // Files Tab
   fileCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    ...Layout.card,
+    marginBottom: Layout.spacing.lg,
     flexDirection: 'row',
-  },
-  filePreview: {
-    marginRight: 16,
   },
   fileImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
+    borderRadius: Layout.radius.sm,
+    marginRight: Layout.spacing.lg,
   },
   fileInfo: {
     flex: 1,
   },
   fileName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.xs,
   },
   fileSpecs: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 12,
+    ...Typography.caption,
+    marginBottom: Layout.spacing.md,
   },
   downloadButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.lg,
     alignSelf: 'flex-start',
   },
   downloadIcon: {
     fontSize: 14,
-    marginRight: 6,
+    marginRight: Layout.spacing.sm,
   },
   downloadText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-
-  downloadAllContainer: {
-    marginTop: 16,
-  },
-  downloadAllButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  downloadAllText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Timeline Tab
-  timelineItem: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  timelineLeft: {
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  timelineIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  timelineIndicatorCompleted: {
-    backgroundColor: '#4CAF50',
-  },
-  timelineCheck: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  timelineLine: {
-    width: 2,
-    height: 40,
-    backgroundColor: '#333',
-    marginTop: 8,
-  },
-  timelineContent: {
-    flex: 1,
-  },
-  timelineStage: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  timelineDate: {
-    fontSize: 12,
-    color: '#00A8FF',
-    marginBottom: 4,
-  },
-  timelineDescription: {
-    fontSize: 14,
-    color: '#888',
-    lineHeight: 20,
-  },
-
-  // Specs Tab
-  specsCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  specRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  specLabel: {
-    fontSize: 14,
-    color: '#888',
-    flex: 1,
-  },
-  specValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    flex: 2,
-    textAlign: 'right',
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-    paddingTop: 12,
-    marginTop: 8,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    flex: 1,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    flex: 2,
-    textAlign: 'right',
-  },
-
-  // Image Modal
-  imageModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageModalClose: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    zIndex: 1000,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageModalCloseText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  modalImage: {
-    width: screenWidth * 0.9,
-    height: screenWidth * 0.9,
-    borderRadius: 12,
+    ...Typography.buttonSmall,
   },
 
   bottomPadding: {
-    height: 40,
+    height: Layout.spacing.xxxl,
   },
 });
 

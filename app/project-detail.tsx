@@ -1,15 +1,22 @@
-// project-detail.tsx - 具体企划详情页面（工作版）
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+
+// Import your component library
+import EmptyState from './components/common/EmptyState';
+import StatusBadge from './components/common/StatusBadge';
+import { Colors } from './components/styles/Colors';
+import GlobalStyles from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
 
 const ProjectDetailPage = () => {
   const params = useLocalSearchParams();
@@ -28,6 +35,9 @@ const ProjectDetailPage = () => {
 
   const [activeTab, setActiveTab] = useState('Applicants');
   const [showTipCard, setShowTipCard] = useState(true);
+  
+  // 招募状态管理
+  const [isRecruiting, setIsRecruiting] = useState(true);
 
   // Mock data for artists
   const [applicantArtists, setApplicantArtists] = useState([
@@ -82,6 +92,30 @@ const ProjectDetailPage = () => {
 
   // Selected artists - dynamically updated when artists are selected
   const [selectedArtists, setSelectedArtists] = useState([]);
+
+  // 处理招募状态切换
+  const handleRecruitingToggle = () => {
+    const newStatus = !isRecruiting;
+    
+    Alert.alert(
+      'Change Recruiting Status',
+      `Are you sure you want to ${newStatus ? 'open' : 'close'} recruiting for this project?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: () => {
+            setIsRecruiting(newStatus);
+            // 这里可以添加 API 调用来更新服务器上的状态
+            console.log(`Project ${projectId} recruiting status changed to: ${newStatus ? 'Open' : 'Closed'}`);
+          },
+        },
+      ]
+    );
+  };
 
   const handleArtistPress = (artistId) => {
     router.push({
@@ -159,7 +193,7 @@ const ProjectDetailPage = () => {
       onPress={() => handleArtistPress(artist.id)}
     >
       <View style={styles.artistInfo}>
-        <Image source={{ uri: artist.avatar }} style={styles.artistAvatar} />
+        <Image source={{ uri: artist.avatar }} style={Layout.avatar} />
         <View style={styles.artistDetails}>
           <Text style={styles.artistName}>{artist.name}</Text>
           <View style={styles.artistMeta}>
@@ -179,9 +213,12 @@ const ProjectDetailPage = () => {
       {showActions && (
         <View style={styles.artistActions}>
           {artist.isSelected ? (
-            <View style={styles.selectedBadge}>
-              <Text style={styles.selectedText}>✓ Selected</Text>
-            </View>
+            <StatusBadge 
+              status="completed" 
+              text="Selected" 
+              icon="✓"
+              size="small"
+            />
           ) : (
             <TouchableOpacity 
               style={styles.selectButton}
@@ -220,20 +257,19 @@ const ProjectDetailPage = () => {
             {applicantArtists.length > 0 ? (
               applicantArtists.map(artist => renderArtistCard(artist, true))
             ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>🎨</Text>
-                <Text style={styles.emptyStateTitle}>No artists have applied yet</Text>
-                <Text style={styles.emptyStateText}>
-                  Improve your project rating to get better quality applications!
-                </Text>
+              <EmptyState
+                icon="🎨"
+                title="No artists have applied yet"
+                description="Improve your project rating to get better quality applications!"
+                buttonText="View Rating Details"
+                onButtonPress={() => console.log('View rating details')}
+                style={styles.emptyStateWithRating}
+              >
                 <View style={styles.ratingDisplay}>
                   <Text style={styles.ratingLabel}>Project Rating</Text>
                   <Text style={styles.ratingScore}>45</Text>
                 </View>
-                <TouchableOpacity style={styles.ratingButton}>
-                  <Text style={styles.ratingButtonText}>View Rating Details</Text>
-                </TouchableOpacity>
-              </View>
+              </EmptyState>
             )}
           </View>
         );
@@ -244,16 +280,13 @@ const ProjectDetailPage = () => {
             {invitedArtists.length > 0 ? (
               invitedArtists.map(artist => renderArtistCard(artist))
             ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>📧</Text>
-                <Text style={styles.emptyStateTitle}>You haven't invited any artists yet</Text>
-                <Text style={styles.emptyStateText}>
-                  You can send invitations to artists to join this project
-                </Text>
-                <TouchableOpacity style={styles.inviteButton} onPress={handleInviteArtist}>
-                  <Text style={styles.inviteButtonText}>Invite Artists Now</Text>
-                </TouchableOpacity>
-              </View>
+              <EmptyState
+                icon="📧"
+                title="You haven't invited any artists yet"
+                description="You can send invitations to artists to join this project"
+                buttonText="Invite Artists Now"
+                onButtonPress={handleInviteArtist}
+              />
             )}
           </View>
         );
@@ -264,13 +297,11 @@ const ProjectDetailPage = () => {
             {selectedArtists.length > 0 ? (
               selectedArtists.map(artist => renderArtistCard(artist, false, true))
             ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateIcon}>✅</Text>
-                <Text style={styles.emptyStateTitle}>No artists selected yet</Text>
-                <Text style={styles.emptyStateText}>
-                  Review applications and select artists to work on your project
-                </Text>
-              </View>
+              <EmptyState
+                icon="✅"
+                title="No artists selected yet"
+                description="Review applications and select artists to work on your project"
+              />
             )}
           </View>
         );
@@ -281,20 +312,52 @@ const ProjectDetailPage = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <View style={GlobalStyles.container}>
+      {/* Header with unified padding - 手动实现以保持与其他页面一致 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Project Details</Text>
-        <TouchableOpacity style={styles.toggleButton}>
-          <Text style={styles.toggleIcon}>⚪</Text>
-          <Text style={styles.toggleText}>Recruiting Closed</Text>
+        
+        {/* 招募状态切换按钮 */}
+        <TouchableOpacity 
+          style={[
+            styles.recruitingToggle,
+            { backgroundColor: isRecruiting ? Colors.success : Colors.textMuted }
+          ]}
+          onPress={handleRecruitingToggle}
+        >
+          <View style={[
+            styles.toggleIndicator,
+            { 
+              backgroundColor: Colors.text,
+              transform: [{ translateX: isRecruiting ? 0 : 14 }]
+            }
+          ]} />
+          <Text style={[
+            styles.recruitingText,
+            { 
+              marginLeft: isRecruiting ? 28 : 8,
+              color: Colors.text
+            }
+          ]}>
+            {isRecruiting ? 'Recruiting' : 'Recruiting Closed'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* 招募状态提示 */}
+        {!isRecruiting && (
+          <View style={styles.recruitingClosedBanner}>
+            <Text style={styles.bannerIcon}>🚫</Text>
+            <Text style={styles.bannerText}>
+              This project is no longer accepting new applications. Artists cannot see this project in the project list.
+            </Text>
+          </View>
+        )}
+
         {/* Project Info */}
         <View style={styles.projectInfoCard}>
           <Text style={styles.projectTitle}>{title}</Text>
@@ -340,25 +403,21 @@ const ProjectDetailPage = () => {
         {/* Tab Content */}
         {renderTabContent()}
 
-        <View style={styles.bottomPadding} />
+        <View style={GlobalStyles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
+  // Header - 与其他页面保持完全一致
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...Layout.rowSpaceBetween,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingTop: 50, // 关键！与其他页面一致的状态栏高度
+    paddingBottom: Layout.spacing.lg,
+    ...Layout.borderBottom,
   },
   backButton: {
     width: 40,
@@ -368,63 +427,88 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#FFFFFF',
+    color: Colors.text,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    ...Typography.h5,
+    flex: 1,
+    textAlign: 'center',
   },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  toggleIcon: {
-    fontSize: 12,
-    marginRight: 6,
-  },
-  toggleText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-  },
+
   content: {
     flex: 1,
   },
 
-  // Project Detail Styles
+  // 招募状态切换按钮
+  recruitingToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.xl,
+    position: 'relative',
+    minWidth: 140,
+  },
+  toggleIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    position: 'absolute',
+    left: 6,
+  },
+  recruitingText: {
+    ...Typography.caption,
+    fontWeight: '600',
+  },
+
+  // 招募关闭横幅
+  recruitingClosedBanner: {
+    backgroundColor: Colors.warning,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+    padding: Layout.spacing.lg,
+    borderRadius: Layout.radius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  bannerIcon: {
+    fontSize: 20,
+    marginRight: Layout.spacing.md,
+  },
+  bannerText: {
+    ...Typography.bodySmall,
+    flex: 1,
+    color: Colors.text,
+    lineHeight: 18,
+  },
+
+  // Project Info Card
   projectInfoCard: {
-    backgroundColor: '#1A1A1A',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 20,
+    ...Layout.card,
+    ...Layout.marginHorizontal,
+    marginBottom: Layout.spacing.lg,
   },
   projectTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h4,
+    marginBottom: Layout.spacing.sm,
   },
   projectMeta: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmallMuted,
   },
+
+  // Tip Card
   tipCard: {
     backgroundColor: '#F5F5F5',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 16,
+    ...Layout.marginHorizontal,
+    marginBottom: Layout.spacing.xl,
+    borderRadius: Layout.radius.lg,
+    padding: Layout.spacing.lg,
     position: 'relative',
   },
   tipCloseButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: Layout.spacing.md,
+    right: Layout.spacing.md,
     width: 24,
     height: 24,
     justifyContent: 'center',
@@ -432,212 +516,144 @@ const styles = StyleSheet.create({
   },
   tipCloseIcon: {
     fontSize: 16,
-    color: '#888',
+    color: Colors.textMuted,
   },
   tipContent: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'flex-start',
     paddingRight: 30,
   },
   tipIcon: {
     fontSize: 32,
-    marginRight: 12,
+    marginRight: Layout.spacing.md,
   },
   tipTextContainer: {
     flex: 1,
   },
   tipTitle: {
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: 'bold',
-    color: '#00A8FF',
-    marginBottom: 4,
+    color: Colors.primary,
+    marginBottom: Layout.spacing.xs,
   },
   tipSubtitle: {
-    fontSize: 14,
+    ...Typography.bodySmall,
     color: '#666',
   },
   
   // Tab Navigation
   tabNavigation: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    ...Layout.row,
+    ...Layout.paddingHorizontal,
+    marginBottom: Layout.spacing.xl,
   },
   tabButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 16,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    marginRight: Layout.spacing.lg,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   activeTabButton: {
-    borderBottomColor: '#00A8FF',
+    borderBottomColor: Colors.primary,
   },
   tabButtonText: {
-    fontSize: 16,
-    color: '#888',
+    ...Typography.body,
+    color: Colors.textMuted,
   },
   activeTabButtonText: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
 
   // Tab Content
   tabContent: {
-    paddingHorizontal: 20,
+    ...Layout.paddingHorizontal,
   },
   
   // Artist Card
   artistCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    ...Layout.card,
+    marginBottom: Layout.spacing.md,
   },
   artistInfo: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-  },
-  artistAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
   },
   artistDetails: {
     flex: 1,
+    marginHorizontal: Layout.spacing.md,
   },
   artistName: {
-    fontSize: 16,
+    ...Typography.body,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: Layout.spacing.xs,
   },
   artistMeta: {
-    flexDirection: 'row',
+    ...Layout.row,
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Layout.spacing.xs,
   },
   artistRating: {
-    fontSize: 12,
-    color: '#FFD700',
+    ...Typography.caption,
+    color: Colors.rating,
   },
   artistProjects: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
+    color: Colors.textMuted,
   },
   artistResponse: {
-    fontSize: 12,
-    color: '#888',
+    ...Typography.caption,
+    color: Colors.textMuted,
   },
   artistTime: {
     fontSize: 11,
-    color: '#666',
+    color: Colors.textDisabled,
   },
   artistPortfolio: {
     width: 60,
     height: 60,
-    borderRadius: 8,
+    borderRadius: Layout.radius.sm,
   },
   artistActions: {
-    marginTop: 12,
+    marginTop: Layout.spacing.md,
     alignItems: 'flex-end',
   },
   selectButton: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.xl,
   },
   selectButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  selectedBadge: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  selectedText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...Typography.buttonSmall,
   },
   deselectButton: {
-    backgroundColor: '#FF5722',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: Colors.error,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.sm,
+    borderRadius: Layout.radius.xl,
   },
   deselectButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
+    ...Typography.buttonSmall,
   },
 
-  // Empty State
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
+  // Custom Empty State with Rating
+  emptyStateWithRating: {
+    paddingVertical: Layout.spacing.xxxl,
   },
   ratingDisplay: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginVertical: Layout.spacing.xl,
   },
   ratingLabel: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 8,
+    ...Typography.bodySmallMuted,
+    marginBottom: Layout.spacing.sm,
   },
   ratingScore: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#00A8FF',
-  },
-  ratingButton: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  ratingButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  inviteButton: {
-    backgroundColor: '#00A8FF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  inviteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  bottomPadding: {
-    height: 40,
+    color: Colors.primary,
   },
 });
 

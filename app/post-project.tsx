@@ -3,52 +3,46 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Dimensions,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+
+// Import your component library
+import Header from './components/common/Header';
+import { Colors } from './components/styles/Colors';
+import { GlobalStyles } from './components/styles/GlobalStyles';
+import { Layout } from './components/styles/Layout';
+import { Typography } from './components/styles/Typography';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const PostProjectPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [projectData, setProjectData] = useState({
-    // Step 1: Project Type Selection
-    projectType: 'project', // Auto-select since only one option
-    
-    // Step 2: Project Category
+    projectType: 'project',
     category: '',
-    purpose: '', // 'personal' or 'commercial'
-    purposeOption: '', // specific purpose option selected
-    
-    // Step 3: Deadline & Budget
+    purpose: '',
+    purposeOption: '',
     deadline: '',
     customDeadline: new Date(),
     showDatePicker: false,
     budgetMin: '',
     budgetMax: '',
-    
-    // Step 4: Requirements Details
     title: '',
     detailedRequirements: '',
-    
-    // Step 5: Reference Images (skipping contact cards as requested)
     referenceImages: [],
-    
-    // Step 6: Advanced Options
     fileFormats: [],
     publishingRights: 'requireAgreement',
-    
-    // Final: Review
     projectFlow: [
       { stage: 'Deposit Payment', percentage: 0 },
       { stage: 'Draft', percentage: 20 },
@@ -60,12 +54,7 @@ const PostProjectPage = () => {
 
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Project type options from image 1 - Only keep Post Project
-  const projectTypes = [
-    { id: 'project', title: 'Post Project', subtitle: 'More customizable commission method', icon: '📋' }
-  ];
-
-  // Category options from image 2
+  // Data configurations
   const categories = [
     { id: 'oc', title: 'Original/OC', icon: '🎨' },
     { id: 'portrait', title: 'Portrait', icon: '👤' },
@@ -76,7 +65,6 @@ const PostProjectPage = () => {
     { id: 'other', title: 'Other - None of the above types I need', icon: '🔄' }
   ];
 
-  // Purpose options from image 2
   const purposes = {
     personal: {
       title: 'Personal Use',
@@ -100,7 +88,6 @@ const PostProjectPage = () => {
     }
   };
 
-  // Deadline options from image 3
   const deadlineOptions = [
     { id: '7days', title: '7 Days', date: '2025-06-29' },
     { id: '14days', title: '14 Days', date: '2025-07-09' },
@@ -109,7 +96,17 @@ const PostProjectPage = () => {
     { id: 'next_month', title: 'End of Next Month', date: '2025-07-31' }
   ];
 
-  // Get display text for deadline selector
+  const fileFormats = [
+    'JPG', 'PNG', 'PSD', 'AI', 'SVG', 'TIF', 'GIF', 'Other'
+  ];
+
+  const publishingRights = [
+    { id: 'free', title: 'Artist can publish freely' },
+    { id: 'requireAgreement', title: 'Require agreement for public posting' },
+    { id: 'noPublish', title: 'Cannot be published publicly' }
+  ];
+
+  // Helper functions
   const getDeadlineDisplayText = () => {
     if (projectData.deadline === 'custom') {
       return `Selected: ${projectData.customDeadline.toLocaleDateString()}`;
@@ -123,18 +120,6 @@ const PostProjectPage = () => {
   const isDeadlineSelected = () => {
     return projectData.deadline === 'custom' || projectData.deadline !== '';
   };
-
-  // File format options from image 6
-  const fileFormats = [
-    'JPG', 'PNG', 'PSD', 'AI', 'SVG', 'TIF', 'GIF', 'Other'
-  ];
-
-  // Publishing rights options from image 6
-  const publishingRights = [
-    { id: 'free', title: 'Artist can publish freely' },
-    { id: 'requireAgreement', title: 'Require agreement for public posting' },
-    { id: 'noPublish', title: 'Cannot be published publicly' }
-  ];
 
   const handleNext = () => {
     if (currentStep < 6) {
@@ -183,17 +168,29 @@ const PostProjectPage = () => {
       return;
     }
     
-    // Here you would normally send the data to your API
     console.log('Publishing project:', projectData);
     alert('Project posted successfully!');
     router.back();
   };
 
+  const getStepTitle = () => {
+    const titles = [
+      'Select Type',
+      'Category',
+      'Deadline & Budget',
+      'Requirements',
+      'References',
+      'Advanced',
+      'Review'
+    ];
+    return titles[currentStep];
+  };
+
+  // Render functions for each step
   const renderProjectTypeSelection = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>Select Project Type</Text>
       
-      {/* Auto-selected Post Project */}
       <View style={[styles.typeCard, styles.selectedCard]}>
         <View style={styles.typeIcon}>
           <Text style={styles.iconText}>📋</Text>
@@ -217,6 +214,7 @@ const PostProjectPage = () => {
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>Artwork Category</Text>
       
+      {/* Keep 2x4 grid layout */}
       <View style={styles.categoryGrid}>
         {categories.map((category) => (
           <TouchableOpacity
@@ -389,7 +387,7 @@ const PostProjectPage = () => {
           <TextInput
             style={styles.budgetField}
             placeholder="Budget Lower Limit"
-            placeholderTextColor="#666"
+            placeholderTextColor={Colors.textDisabled}
             value={projectData.budgetMin}
             onChangeText={(text) => setProjectData(prev => ({ ...prev, budgetMin: text }))}
             keyboardType="numeric"
@@ -401,7 +399,7 @@ const PostProjectPage = () => {
           <TextInput
             style={styles.budgetField}
             placeholder="Budget Upper Limit"
-            placeholderTextColor="#666"
+            placeholderTextColor={Colors.textDisabled}
             value={projectData.budgetMax}
             onChangeText={(text) => setProjectData(prev => ({ ...prev, budgetMax: text }))}
             keyboardType="numeric"
@@ -419,7 +417,7 @@ const PostProjectPage = () => {
       <TextInput
         style={styles.titleInput}
         placeholder="Please fill in the title"
-        placeholderTextColor="#666"
+        placeholderTextColor={Colors.textDisabled}
         value={projectData.title}
         onChangeText={(text) => setProjectData(prev => ({ ...prev, title: text }))}
       />
@@ -427,7 +425,7 @@ const PostProjectPage = () => {
       <TextInput
         style={styles.detailsInput}
         placeholder="Please fill in detailed requirements ▼"
-        placeholderTextColor="#666"
+        placeholderTextColor={Colors.textDisabled}
         value={projectData.detailedRequirements}
         onChangeText={(text) => setProjectData(prev => ({ ...prev, detailedRequirements: text }))}
         multiline
@@ -435,7 +433,6 @@ const PostProjectPage = () => {
         textAlignVertical="top"
       />
 
-      {/* Example references */}
       <View style={styles.exampleSection}>
         <View style={styles.exampleCard}>
           <Text style={styles.exampleIcon}>✅</Text>
@@ -619,37 +616,25 @@ const PostProjectPage = () => {
     }
   };
 
-  const getStepTitle = () => {
-    const titles = [
-      'Select Type',
-      'Category',
-      'Deadline & Budget',
-      'Requirements',
-      'References',
-      'Advanced',
-      'Review'
-    ];
-    return titles[currentStep];
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
-        <TouchableOpacity style={styles.historyButton}>
-          <Text style={styles.historyIcon}>🕐</Text>
-          <Text style={styles.historyText}>Load History</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={GlobalStyles.container}>
+      {/* Header - Use your Header component */}
+      <Header 
+        title={getStepTitle()}
+        showBackButton={true}
+        onBackPress={handleBack}
+        rightElement={
+          <TouchableOpacity style={styles.historyButton}>
+            <Text style={styles.historyIcon}>🕐</Text>
+            <Text style={styles.historyText}>Load History</Text>
+          </TouchableOpacity>
+        }
+      />
 
       {/* Progress Indicator */}
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${((currentStep + 1) / 7) * 100}%` }]} />
+        <View style={GlobalStyles.progressBar}>
+          <View style={[GlobalStyles.progressFill, { width: `${((currentStep + 1) / 7) * 100}%` }]} />
         </View>
       </View>
 
@@ -659,22 +644,22 @@ const PostProjectPage = () => {
       >
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {renderStepContent()}
-          <View style={styles.bottomPadding} />
+          <View style={GlobalStyles.bottomPadding} />
         </ScrollView>
 
         {/* Bottom Buttons */}
         <View style={styles.bottomButtons}>
           {currentStep === 6 ? (
             <>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleBack}>
-                <Text style={styles.secondaryButtonText}>Back to Edit</Text>
+              <TouchableOpacity style={GlobalStyles.secondaryButton} onPress={handleBack}>
+                <Text style={GlobalStyles.secondaryButtonText}>Back to Edit</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.primaryButton, !agreedToTerms && styles.disabledButton]}
+                style={[GlobalStyles.primaryButton, !agreedToTerms && GlobalStyles.disabledButton]}
                 onPress={handlePublish}
                 disabled={!agreedToTerms}
               >
-                <Text style={styles.primaryButtonText}>Confirm Post</Text>
+                <Text style={GlobalStyles.primaryButtonText}>Confirm Post</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -689,60 +674,13 @@ const PostProjectPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1A1A1A',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#FFFFFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  historyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  historyIcon: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  historyText: {
-    fontSize: 14,
-    color: '#00A8FF',
-  },
+  // Progress
   progressContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 2,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#00A8FF',
-    borderRadius: 2,
-  },
+  
+  // Layout
   keyboardContainer: {
     flex: 1,
   },
@@ -750,42 +688,48 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepContainer: {
-    padding: 20,
+    padding: Layout.spacing.xl,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 20,
+    ...Typography.h3,
+    marginBottom: Layout.spacing.xl,
   },
   stepSubtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 20,
+    ...Typography.bodyMuted,
+    marginBottom: Layout.spacing.xl,
+  },
+
+  // Header right element
+  historyButton: {
+    ...Layout.row,
+  },
+  historyIcon: {
+    fontSize: 16,
+    marginRight: Layout.spacing.xs,
+  },
+  historyText: {
+    ...Typography.buttonSmall,
+    color: Colors.primary,
   },
   
   // Project Type Selection
   typeCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    ...Layout.card,
+    ...Layout.row,
+    marginBottom: Layout.spacing.md,
   },
   selectedCard: {
     borderWidth: 2,
-    borderColor: '#00A8FF',
-    backgroundColor: '#1A2A3A',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.artist,
   },
   typeIcon: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    borderRadius: Layout.radius.round,
+    backgroundColor: Colors.card,
+    ...Layout.columnCenter,
+    marginRight: Layout.spacing.lg,
   },
   iconText: {
     fontSize: 24,
@@ -794,94 +738,81 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   typeTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.xs,
   },
   typeSubtitle: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodyMuted,
   },
   chevron: {
-    fontSize: 20,
-    color: '#00A8FF',
-    fontWeight: 'bold',
+    ...Typography.h5,
+    color: Colors.primary,
   },
   autoSelectedNote: {
-    backgroundColor: '#1A3A1A',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.artist,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: Colors.success,
   },
   autoSelectedText: {
-    fontSize: 14,
-    color: '#4CAF50',
+    ...Typography.bodySmall,
+    color: Colors.success,
     lineHeight: 20,
   },
 
-  // Category Selection
+  // Category Selection - Keep 2 rows layout
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 24,
+    justifyContent: 'space-between',
+    marginBottom: Layout.spacing.xxxl,
   },
   categoryCard: {
-    width: (screenWidth - 60) / 2,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 20,
-    margin: 5,
+    width: '48%', // Ensure 2 columns
+    ...Layout.card,
     alignItems: 'center',
+    marginBottom: Layout.spacing.md,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.border,
   },
   selectedCategoryCard: {
-    borderColor: '#00A8FF',
-    backgroundColor: '#1A2A3A',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.artist,
   },
   categoryIcon: {
     fontSize: 32,
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
   },
   categoryTitle: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
     textAlign: 'center',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
+    ...Typography.h4,
+    marginBottom: Layout.spacing.lg,
   },
   purposeSection: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
+    ...Layout.card,
+    marginBottom: Layout.spacing.lg,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   selectedPurposeSection: {
-    borderColor: '#00A8FF',
-    backgroundColor: '#1A2A3A',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.artist,
   },
   purposeTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.sm,
   },
   selectedPurposeTitle: {
-    color: '#00A8FF',
+    color: Colors.primary,
   },
   purposeDescription: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodyMuted,
     lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   purposeGrid: {
     flexDirection: 'row',
@@ -889,426 +820,338 @@ const styles = StyleSheet.create({
   },
   purposeOption: {
     width: '50%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
+    ...Layout.row,
+    marginBottom: Layout.spacing.md,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.sm,
   },
   selectedPurposeOption: {
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.primary,
   },
   purposeIcon: {
     fontSize: 20,
-    marginRight: 8,
+    marginRight: Layout.spacing.sm,
   },
   purposeText: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
   },
   selectedPurposeText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontWeight: 'bold',
   },
 
   // Deadline and Budget
   customDateSelector: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    ...Layout.card,
+    marginBottom: Layout.spacing.xl,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   selectedCustomDateSelector: {
-    borderColor: '#00A8FF',
-    backgroundColor: '#1A2A3A',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.artist,
   },
   customDateText: {
-    color: '#666',
-    fontSize: 16,
+    ...Typography.body,
+    color: Colors.textDisabled,
   },
   selectedDateText: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
-  // Date Picker Modal Styles
+  
+  // Date Picker Modal
   datePickerModal: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: Colors.overlay,
     justifyContent: 'flex-end',
   },
   datePickerContainer: {
-    backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: Layout.radius.xl,
+    borderTopRightRadius: Layout.radius.xl,
+    paddingTop: Layout.spacing.xl,
   },
   datePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    ...Layout.rowSpaceBetween,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingBottom: Layout.spacing.xl,
+    ...Layout.borderBottom,
   },
   datePickerButton: {
-    fontSize: 16,
-    color: '#888',
+    ...Typography.body,
+    color: Colors.textMuted,
   },
   confirmButton: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
+  
   quickSelectTitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 16,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.lg,
   },
   deadlineOption: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    ...Layout.card,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.sm,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   selectedDeadlineOption: {
-    borderColor: '#00A8FF',
-    backgroundColor: '#1A2A3A',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.artist,
   },
   deadlineTitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
+    ...Typography.body,
     fontWeight: 'bold',
   },
   selectedDeadlineTitle: {
-    color: '#00A8FF',
+    color: Colors.primary,
   },
   deadlineDate: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
   },
   selectedDeadlineDate: {
-    color: '#00A8FF',
+    color: Colors.primary,
     fontWeight: 'bold',
   },
-  quickSelectTitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  deadlineOption: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  selectedDeadlineOption: {
-    borderWidth: 2,
-    borderColor: '#00A8FF',
-  },
-  deadlineTitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  deadlineDate: {
-    fontSize: 14,
-    color: '#888',
-  },
+  
   budgetContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
+    ...Layout.row,
+    marginTop: Layout.spacing.lg,
   },
   budgetInput: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.sm,
+    ...Layout.row,
+    paddingHorizontal: Layout.spacing.md,
     flex: 1,
   },
   currencySymbol: {
-    fontSize: 16,
-    color: '#FF6B35',
-    marginRight: 8,
+    ...Typography.body,
+    color: Colors.secondary,
+    marginRight: Layout.spacing.sm,
   },
   budgetField: {
     flex: 1,
-    color: '#FFFFFF',
-    fontSize: 16,
-    paddingVertical: 12,
+    ...Typography.body,
+    color: Colors.text,
+    paddingVertical: Layout.spacing.md,
   },
   budgetSeparator: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginHorizontal: 12,
+    ...Typography.body,
+    marginHorizontal: Layout.spacing.md,
   },
   budgetUnit: {
-    fontSize: 16,
-    color: '#888',
-    marginLeft: 8,
+    ...Typography.body,
+    color: Colors.textMuted,
+    marginLeft: Layout.spacing.sm,
   },
 
   // Requirements Details
   titleInput: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    ...GlobalStyles.input,
+    marginBottom: Layout.spacing.lg,
   },
   detailsInput: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    color: '#FFFFFF',
-    fontSize: 16,
-    marginBottom: 20,
+    ...GlobalStyles.input,
     minHeight: 120,
+    marginBottom: Layout.spacing.xl,
   },
   exampleSection: {
-    marginBottom: 20,
+    marginBottom: Layout.spacing.xl,
   },
   exampleCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    ...Layout.card,
+    marginBottom: Layout.spacing.md,
   },
   exampleIcon: {
     fontSize: 20,
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
   },
   exampleTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.sm,
   },
   exampleText: {
-    fontSize: 14,
-    color: '#CCCCCC',
+    ...Typography.bodyMuted,
     lineHeight: 20,
   },
   helpButton: {
-    paddingVertical: 16,
+    paddingVertical: Layout.spacing.lg,
   },
   helpText: {
-    fontSize: 14,
-    color: '#00A8FF',
+    ...Typography.bodySmall,
+    color: Colors.primary,
     textAlign: 'center',
   },
 
   // Reference Images
   sectionSubtitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    marginTop: 20,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.md,
+    marginTop: Layout.spacing.xl,
   },
   addCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 20,
+    ...Layout.card,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
     borderStyle: 'dashed',
     borderWidth: 2,
-    borderColor: '#333',
+    borderColor: Colors.border,
   },
   addIcon: {
     fontSize: 32,
-    color: '#00A8FF',
-    marginBottom: 8,
+    color: Colors.primary,
+    marginBottom: Layout.spacing.sm,
   },
   addText: {
-    fontSize: 16,
-    color: '#00A8FF',
+    ...Typography.body,
+    color: Colors.primary,
   },
   imagePreview: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   previewImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
-    margin: 4,
+    borderRadius: Layout.radius.sm,
+    margin: Layout.spacing.xs,
   },
   tipCard: {
-    backgroundColor: '#1A2A3A',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.artist,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
   },
   tipIcon: {
     fontSize: 20,
-    marginBottom: 8,
+    marginBottom: Layout.spacing.sm,
   },
   tipTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.sm,
   },
   tipText: {
-    fontSize: 14,
-    color: '#CCCCCC',
+    ...Typography.bodyMuted,
     lineHeight: 20,
   },
 
   // Advanced Options
   optionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-    marginTop: 20,
+    ...Typography.h5,
+    marginBottom: Layout.spacing.lg,
+    marginTop: Layout.spacing.xl,
   },
   formatGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 24,
+    marginBottom: Layout.spacing.xxxl,
   },
   formatButton: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    margin: 4,
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.sm,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    margin: Layout.spacing.xs,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: Colors.border,
   },
   selectedFormatButton: {
-    backgroundColor: '#00A8FF',
-    borderColor: '#00A8FF',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   formatText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    ...Typography.bodySmall,
   },
   selectedFormatText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontWeight: 'bold',
   },
   rightsOption: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    ...Layout.card,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.sm,
   },
   selectedRightsOption: {
     borderWidth: 2,
-    borderColor: '#00A8FF',
+    borderColor: Colors.primary,
   },
   rightsText: {
-    fontSize: 16,
-    color: '#FFFFFF',
+    ...Typography.body,
     flex: 1,
   },
   checkMark: {
-    fontSize: 16,
-    color: '#00A8FF',
+    ...Typography.body,
+    color: Colors.primary,
     fontWeight: 'bold',
   },
 
   // Review
   reviewCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
+    ...Layout.card,
+    marginBottom: Layout.spacing.xl,
   },
   reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.xl,
     flexWrap: 'wrap',
   },
   reviewCategory: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 4,
+    ...Typography.bodySmall,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.sm,
+    marginRight: Layout.spacing.sm,
+    marginBottom: Layout.spacing.xs,
   },
   reviewDate: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 4,
+    ...Typography.bodySmall,
+    backgroundColor: Colors.card,
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: Layout.spacing.xs,
+    borderRadius: Layout.radius.sm,
+    marginRight: Layout.spacing.sm,
+    marginBottom: Layout.spacing.xs,
   },
   reviewBudget: {
-    fontSize: 14,
-    color: '#FF6B35',
-    fontWeight: 'bold',
+    ...Typography.price,
   },
   reviewSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    marginTop: 16,
+    ...Typography.h6,
+    marginBottom: Layout.spacing.md,
+    marginTop: Layout.spacing.lg,
   },
   reviewContent: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    marginBottom: 16,
+    ...Typography.bodyMuted,
+    marginBottom: Layout.spacing.lg,
   },
   reviewSpec: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    ...Layout.rowSpaceBetween,
+    marginBottom: Layout.spacing.sm,
   },
   specLabel: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodyMuted,
     flex: 1,
   },
   specValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    ...Typography.bodySmall,
     flex: 2,
     textAlign: 'right',
   },
   workflowDescription: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodyMuted,
     lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: Layout.spacing.lg,
   },
   milestoneContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
+    ...Layout.rowSpaceBetween,
+    marginTop: Layout.spacing.lg,
   },
   milestoneItem: {
     alignItems: 'center',
@@ -1317,110 +1160,68 @@ const styles = StyleSheet.create({
   milestoneCircle: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+    borderRadius: Layout.radius.xl,
+    backgroundColor: Colors.border,
+    ...Layout.columnCenter,
+    marginBottom: Layout.spacing.sm,
   },
   activeMilestoneCircle: {
-    backgroundColor: '#00A8FF',
+    backgroundColor: Colors.primary,
   },
   milestonePercentage: {
+    ...Typography.badge,
     fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
   },
   milestoneStage: {
-    fontSize: 10,
-    color: '#888',
+    ...Typography.caption,
     textAlign: 'center',
   },
   termsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
+    ...Layout.row,
+    paddingVertical: Layout.spacing.lg,
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: Layout.radius.xs,
     borderWidth: 2,
-    borderColor: '#666',
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: Colors.textDisabled,
+    marginRight: Layout.spacing.md,
+    ...Layout.columnCenter,
   },
   checkedCheckbox: {
-    backgroundColor: '#00A8FF',
-    borderColor: '#00A8FF',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   checkmark: {
-    color: '#FFFFFF',
+    ...Typography.badge,
     fontSize: 12,
-    fontWeight: 'bold',
   },
   termsText: {
-    fontSize: 14,
-    color: '#888',
+    ...Typography.bodyMuted,
     flex: 1,
   },
   termsLink: {
-    color: '#00A8FF',
+    color: Colors.primary,
   },
 
   // Bottom Buttons
-  bottomPadding: {
-    height: 20,
-  },
   bottomButtons: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#0A0A0A',
-    borderTopWidth: 1,
-    borderTopColor: '#1A1A1A',
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.lg,
+    backgroundColor: Colors.background,
+    ...Layout.borderTop,
   },
   nextButton: {
     flex: 1,
-    backgroundColor: '#00A8FF',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: Layout.radius.md,
+    paddingVertical: Layout.spacing.lg,
     alignItems: 'center',
   },
   nextButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  secondaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: '#00A8FF',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  disabledButton: {
-    backgroundColor: '#333',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...Typography.button,
   },
 });
 
