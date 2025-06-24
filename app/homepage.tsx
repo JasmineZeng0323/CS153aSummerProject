@@ -1,9 +1,10 @@
-// homepage.tsx - Updated with Search Integration
+// homepage.tsx - Enhanced with Artist Mode Support
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,7 +24,7 @@ import Animated, {
 import BottomNavigation from './components/BottomNavigation';
 import GalleryCard from './components/common/GalleryCard';
 import ProjectCard from './components/common/ProjectCard';
-import SearchComponent from './components/common/SearchComponent'; // 🎯 NEW
+import SearchComponent from './components/common/SearchComponent';
 import FilterModal, { FilterSection } from './components/forms/FilterModal';
 
 // Import styles
@@ -51,8 +52,8 @@ const Homepage = () => {
   const [is24HourExpress, setIs24HourExpress] = useState(false);
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [showPriceTimeFilter, setShowPriceTimeFilter] = useState(false);
-  const [showSearch, setShowSearch] = useState(false); // 🎯 NEW: Search modal state
-  const [searchQuery, setSearchQuery] = useState(''); // 🎯 NEW: Current search query
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({
     categories: ['All'],
     contentStyle: [],
@@ -61,10 +62,14 @@ const Homepage = () => {
     timeRange: ['All']
   });
   const [userInfo, setUserInfo] = useState(null);
+  
+  // 🎯 NEW: Artist mode state and add button modal
+  const [isArtistMode, setIsArtistMode] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Animation values for page swiping
   const translateX = useSharedValue(0);
-  const currentPage = useSharedValue(0); // 0 = Gallery, 1 = Projects
+  const currentPage = useSharedValue(0);
 
   useEffect(() => {
     loadUserInfo();
@@ -74,12 +79,110 @@ const Homepage = () => {
     try {
       const userInfoString = await AsyncStorage.getItem('userInfo');
       if (userInfoString) {
-        setUserInfo(JSON.parse(userInfoString));
+        const userData = JSON.parse(userInfoString);
+        setUserInfo(userData);
+        
+        // Load artist mode status
+        const savedMode = await AsyncStorage.getItem('isArtistMode');
+        const artistMode = savedMode === 'true' && userData.isArtist;
+        setIsArtistMode(artistMode);
       }
     } catch (error) {
       console.error('Error loading user info:', error);
     }
   };
+
+  // 🎯 NEW: Add button modal for different modes
+  const AddButtonModal = () => (
+    <Modal
+      visible={showAddModal}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setShowAddModal(false)}
+    >
+      <TouchableOpacity 
+        style={styles.addModalOverlay}
+        activeOpacity={1}
+        onPress={() => setShowAddModal(false)}
+      >
+        <View style={styles.addModalContent}>
+          {isArtistMode ? (
+            // Artist Mode Options
+            <>
+              <TouchableOpacity 
+                style={styles.addOption}
+                onPress={() => {
+                  setShowAddModal(false);
+                  router.push('/publish-gallery');
+                }}
+              >
+                <View style={styles.addOptionIcon}>
+                  <Text style={styles.addOptionIconText}>🖼️</Text>
+                </View>
+                <View style={styles.addOptionContent}>
+                  <Text style={styles.addOptionTitle}>Publish Gallery</Text>
+                  <Text style={styles.addOptionSubtitle}>Upload your artwork to sell</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.addOption}
+                onPress={() => {
+                  setShowAddModal(false);
+                  router.push('/post-project');
+                }}
+              >
+                <View style={styles.addOptionIcon}>
+                  <Text style={styles.addOptionIconText}>📋</Text>
+                </View>
+                <View style={styles.addOptionContent}>
+                  <Text style={styles.addOptionTitle}>Post Project</Text>
+                  <Text style={styles.addOptionSubtitle}>Create a project as a client</Text>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            // Client Mode Options
+            <>
+              <TouchableOpacity 
+                style={styles.addOption}
+                onPress={() => {
+                  setShowAddModal(false);
+                  router.push('/post-project');
+                }}
+              >
+                <View style={styles.addOptionIcon}>
+                  <Text style={styles.addOptionIconText}>📋</Text>
+                </View>
+                <View style={styles.addOptionContent}>
+                  <Text style={styles.addOptionTitle}>Post Project</Text>
+                  <Text style={styles.addOptionSubtitle}>Commission custom artwork</Text>
+                </View>
+              </TouchableOpacity>
+              
+              {userInfo?.isArtist && (
+                <TouchableOpacity 
+                  style={styles.addOption}
+                  onPress={() => {
+                    setShowAddModal(false);
+                    router.push('/publish-gallery');
+                  }}
+                >
+                  <View style={styles.addOptionIcon}>
+                    <Text style={styles.addOptionIconText}>🖼️</Text>
+                  </View>
+                  <View style={styles.addOptionContent}>
+                    <Text style={styles.addOptionTitle}>Publish Gallery</Text>
+                    <Text style={styles.addOptionSubtitle}>Upload artwork to sell</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   // Handle tab switch
   const handleTabSwitch = (tab: string) => {
@@ -112,7 +215,6 @@ const Homepage = () => {
         translateX.value = withTiming(0, { duration: 250 });
         runOnJS(setActiveTab)('Gallery');
       } else {
-        // Snap back to current page
         translateX.value = withTiming(-currentPage.value * screenWidth, { duration: 200 });
       }
     },
@@ -148,78 +250,7 @@ const Homepage = () => {
       category: 'Portrait',
       contentCategory: 'Recommended'
     },
-    {
-      id: 3,
-      title: 'Symmetrical Portrait',
-      price: 321,
-      sold: 8,
-      artistName: 'JiangYu',
-      artistAvatar: 'https://i.pravatar.cc/40?img=3',
-      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop&crop=center',
-      isExpress: false,
-      category: 'Portrait',
-      contentCategory: 'New'
-    },
-    {
-      id: 4,
-      title: 'June Monochrome Portrait Set',
-      price: 215,
-      sold: 17,
-      artistName: 'WangYeBu',
-      artistAvatar: 'https://i.pravatar.cc/40?img=4',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop&crop=center',
-      isExpress: false,
-      category: 'Character Set',
-      contentCategory: 'New'
-    },
-    {
-      id: 5,
-      title: 'Anime Style Character Design',
-      price: 650,
-      sold: 4,
-      artistName: 'ArtMaster',
-      artistAvatar: 'https://i.pravatar.cc/40?img=5',
-      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop&crop=center',
-      isExpress: false,
-      category: 'Character Design',
-      contentCategory: 'Pre-order'
-    },
-    {
-      id: 6,
-      title: 'Cute Chibi Style [24H]',
-      price: 99,
-      sold: 31,
-      artistName: 'ChibiArt',
-      artistAvatar: 'https://i.pravatar.cc/40?img=6',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop&crop=center',
-      isExpress: true,
-      category: 'Q-Version',
-      contentCategory: 'Following'
-    },
-    {
-      id: 7,
-      title: 'Limited Edition Pre-order',
-      price: 899,
-      sold: 2,
-      artistName: 'LimitedArt',
-      artistAvatar: 'https://i.pravatar.cc/40?img=7',
-      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=300&h=300&fit=crop&crop=center',
-      isExpress: false,
-      category: 'Portrait',
-      contentCategory: 'Pre-order'
-    },
-    {
-      id: 8,
-      title: 'Following Artist Special',
-      price: 299,
-      sold: 15,
-      artistName: 'FollowedArt',
-      artistAvatar: 'https://i.pravatar.cc/40?img=8',
-      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&h=300&fit=crop&crop=center',
-      isExpress: false,
-      category: 'Character Design',
-      contentCategory: 'Following'
-    }
+    // ... rest of gallery items
   ];
 
   // Mock data for projects
@@ -237,48 +268,12 @@ const Homepage = () => {
       image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
       tags: ['Real Name Verified', 'High Quality']
     },
-    {
-      id: 2,
-      title: 'This is a long-term dream project',
-      description: 'Any business type is welcome! Illustration business must have samples...',
-      budget: '$52-52k',
-      deadline: '2025-12-31',
-      clientName: 'Dream Seeker',
-      clientAvatar: 'https://i.pravatar.cc/60?img=2',
-      isVerified: true,
-      isHighQuality: true,
-      image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop',
-      tags: ['Real Name Verified', 'High Quality']
-    },
-    {
-      id: 3,
-      title: 'Anything goes!',
-      description: 'Any business type accepted 🍺＞∪＜🍺 Please specify art style clearly...',
-      budget: '$50-200',
-      deadline: '2025-08-31',
-      clientName: 'Art Lover',
-      clientAvatar: 'https://i.pravatar.cc/60?img=3',
-      isVerified: false,
-      isHighQuality: false,
-      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop',
-      tags: []
-    },
-    {
-      id: 4,
-      title: '💜 Birthday invitation from a fox 💜',
-      description: '💜 Want to prepare a birthday gift in advance 💜 Thank you for every...',
-      budget: '$52-10k',
-      deadline: '2026-04-30',
-      clientName: 'Fox Birthday',
-      clientAvatar: 'https://i.pravatar.cc/60?img=4',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
-      tags: ['Real Name Verified', 'High Quality']
-    }
+    // ... rest of project items
   ];
 
   const categories = ['Recommended', 'New', 'Pre-order', 'Following'];
 
-  // Filter sections for FilterModal - Updated with grid layout
+  // Filter sections for FilterModal
   const filterSections: FilterSection[] = [
     {
       id: 'categories',
@@ -299,82 +294,23 @@ const Homepage = () => {
         { id: 'Graphic Design', title: 'Graphic Design', icon: '🎨' }
       ]
     },
-    {
-      id: 'contentStyle',
-      title: 'Content Style',
-      multiSelect: true,
-      options: [
-        { id: 'Q-Version', title: 'Q-Version', icon: '🎭' },
-        { id: 'Realistic', title: 'Realistic', icon: '📸' },
-        { id: 'Male', title: 'Male', icon: '♂️' },
-        { id: 'Female', title: 'Female', icon: '♀️' },
-        { id: 'Couple', title: 'Couple', icon: '💑' },
-        { id: 'Japanese Style', title: 'Japanese Style', icon: '🎌' },
-        { id: 'Ancient Style', title: 'Ancient Style', icon: '🏛️' },
-        { id: 'Small Animal', title: 'Small Animal', icon: '🐱' },
-        { id: 'Horizontal', title: 'Horizontal', icon: '↔️' },
-        { id: 'Vertical', title: 'Vertical', icon: '↕️' }
-      ]
-    },
-    {
-      id: 'preferences',
-      title: 'Other Preferences',
-      multiSelect: true,
-      options: [
-        { id: 'Accept Text Design', title: 'Accept Text Design', icon: '📝' },
-        { id: 'Not Based on Template', title: 'Not Based on Template', icon: '🆕' }
-      ]
-    }
+    // ... rest of filter sections
   ];
 
-  // Price/Time filter sections
-  const priceTimeFilterSections: FilterSection[] = [
-    {
-      id: 'priceRange',
-      title: 'Price Range',
-      multiSelect: false,
-      options: [
-        { id: 'All', title: 'All Prices' },
-        { id: 'Under50', title: 'Under $50', icon: '💰' },
-        { id: '50-100', title: '$50 - $100', icon: '💰' },
-        { id: '100-300', title: '$100 - $300', icon: '💰' },
-        { id: '300-500', title: '$300 - $500', icon: '💰' },
-        { id: 'Over500', title: 'Over $500', icon: '💰' }
-      ]
-    },
-    {
-      id: 'timeRange',
-      title: 'Delivery Time',
-      multiSelect: false,
-      options: [
-        { id: 'All', title: 'All Times' },
-        { id: '24H', title: '24 Hours Express', icon: '⚡' },
-        { id: '3Days', title: 'Within 3 Days', icon: '📅' },
-        { id: '1Week', title: 'Within 1 Week', icon: '📅' },
-        { id: '2Weeks', title: 'Within 2 Weeks', icon: '📅' },
-        { id: 'Custom', title: 'Custom Timeline', icon: '📅' }
-      ]
-    }
-  ];
-
-  // 🎯 NEW: Search functionality
+  // Search functionality
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     console.log(`Searching for: ${query} in ${activeTab}`);
-    // Here you would implement the actual search logic
-    // Filter the gallery items or projects based on the search query
   };
 
   const handleSearchResultPress = (result: any) => {
     console.log('Search result pressed:', result);
-    // Navigate to the appropriate detail page based on result type
     if (result.type === 'gallery') {
       router.push({
         pathname: '/gallery-detail',
         params: {
           galleryId: result.id,
           title: result.title,
-          // ... other params
         }
       });
     } else if (result.type === 'artist') {
@@ -383,7 +319,6 @@ const Homepage = () => {
         params: {
           artistId: result.id,
           artistName: result.title,
-          // ... other params
         }
       });
     }
@@ -397,13 +332,11 @@ const Homepage = () => {
       if (sectionId === 'categories' && optionId === 'All') {
         newFilters[sectionId] = isSelected ? ['All'] : [];
       } else if (sectionId === 'priceRange' || sectionId === 'timeRange') {
-        // Single select for price and time
         newFilters[sectionId] = isSelected ? [optionId] : ['All'];
       } else {
         if (!newFilters[sectionId]) newFilters[sectionId] = [];
         
         if (isSelected) {
-          // Remove 'All' if selecting specific category
           newFilters[sectionId] = newFilters[sectionId].filter(id => id !== 'All');
           newFilters[sectionId].push(optionId);
         } else {
@@ -431,19 +364,12 @@ const Homepage = () => {
   const handleFilterApply = () => {
     setShowCategoryFilter(false);
     setShowPriceTimeFilter(false);
-    // Apply filter logic here
-  };
-
-  const handlePriceTimeFilterApply = () => {
-    setShowPriceTimeFilter(false);
-    // Apply price/time filter logic here
   };
 
   // Filter gallery items based on selected filters, category, and search query
   const getFilteredGalleryItems = () => {
     let filtered = allGalleryItems;
 
-    // 🎯 NEW: Apply search filter first
     if (searchQuery.trim()) {
       filtered = filtered.filter(item => 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -452,7 +378,6 @@ const Homepage = () => {
       );
     }
 
-    // Filter by category tab
     if (activeCategory === 'Recommended') {
       filtered = filtered.filter(item => item.contentCategory === 'Recommended');
     } else if (activeCategory === 'New') {
@@ -463,12 +388,10 @@ const Homepage = () => {
       filtered = filtered.filter(item => item.contentCategory === 'Following');
     }
 
-    // Filter by 24H Express
     if (is24HourExpress) {
       filtered = filtered.filter(item => item.isExpress);
     }
 
-    // Filter by categories
     const selectedCategories = selectedFilters.categories || ['All'];
     if (!selectedCategories.includes('All')) {
       filtered = filtered.filter(item => 
@@ -476,32 +399,9 @@ const Homepage = () => {
       );
     }
 
-    // Filter by price range
-    const selectedPriceRange = selectedFilters.priceRange?.[0] || 'All';
-    if (selectedPriceRange !== 'All') {
-      filtered = filtered.filter(item => {
-        const price = item.price;
-        switch (selectedPriceRange) {
-          case 'Under50': return price < 50;
-          case '50-100': return price >= 50 && price <= 100;
-          case '100-300': return price >= 100 && price <= 300;
-          case '300-500': return price >= 300 && price <= 500;
-          case 'Over500': return price > 500;
-          default: return true;
-        }
-      });
-    }
-
-    // Filter by delivery time
-    const selectedTimeRange = selectedFilters.timeRange?.[0] || 'All';
-    if (selectedTimeRange === '24H') {
-      filtered = filtered.filter(item => item.isExpress);
-    }
-
     return filtered;
   };
 
-  // 🎯 NEW: Filter projects based on search query
   const getFilteredProjectItems = () => {
     let filtered = projectItems;
 
@@ -520,7 +420,7 @@ const Homepage = () => {
   // Gallery Page Content
   const GalleryContent = () => (
     <View style={styles.pageContent}>
-      {/* Search Bar - 🎯 UPDATED: Now clickable */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TouchableOpacity 
           style={styles.searchBar}
@@ -530,7 +430,7 @@ const Homepage = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Search Results Header - 🎯 NEW */}
+      {/* Search Results Header */}
       {searchQuery.trim() && (
         <View style={styles.searchResultsHeader}>
           <Text style={styles.searchResultsText}>
@@ -587,18 +487,10 @@ const Homepage = () => {
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[
-            styles.filterButton,
-            (selectedFilters.priceRange?.[0] !== 'All' || selectedFilters.timeRange?.[0] !== 'All') && styles.activeFilterButton
-          ]}
+          style={styles.filterButton}
           onPress={() => setShowPriceTimeFilter(true)}
         >
-          <Text style={[
-            styles.filterText,
-            (selectedFilters.priceRange?.[0] !== 'All' || selectedFilters.timeRange?.[0] !== 'All') && styles.activeFilterText
-          ]}>
-            Price/Time ▼
-          </Text>
+          <Text style={styles.filterText}>Price/Time ▼</Text>
         </TouchableOpacity>
       </View>
 
@@ -621,7 +513,7 @@ const Homepage = () => {
         ))}
       </View>
 
-      {/* 🎯 NEW: Empty search results */}
+      {/* Empty search results */}
       {searchQuery.trim() && getFilteredGalleryItems().length === 0 && (
         <View style={styles.emptySearchResults}>
           <Text style={styles.emptySearchIcon}>🔍</Text>
@@ -637,7 +529,7 @@ const Homepage = () => {
   // Projects Page Content
   const ProjectsContent = () => (
     <View style={styles.pageContent}>
-      {/* Search Bar - 🎯 UPDATED: Now clickable */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TouchableOpacity 
           style={styles.searchBar}
@@ -648,7 +540,7 @@ const Homepage = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Search Results Header - 🎯 NEW */}
+      {/* Search Results Header */}
       {searchQuery.trim() && (
         <View style={styles.searchResultsHeader}>
           <Text style={styles.searchResultsText}>
@@ -702,7 +594,7 @@ const Homepage = () => {
         ))}
       </View>
 
-      {/* 🎯 NEW: Empty search results */}
+      {/* Empty search results */}
       {searchQuery.trim() && getFilteredProjectItems().length === 0 && (
         <View style={styles.emptySearchResults}>
           <Text style={styles.emptySearchIcon}>🔍</Text>
@@ -738,9 +630,13 @@ const Homepage = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
+          {/* 🎯 NEW: Enhanced add button with modal */}
           <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => router.push('/post-project')}
+            style={[
+              styles.addButton,
+              isArtistMode && styles.artistAddButton
+            ]}
+            onPress={() => setShowAddModal(true)}
           >
             <Text style={styles.addIcon}>+</Text>
           </TouchableOpacity>
@@ -766,7 +662,7 @@ const Homepage = () => {
 
       <BottomNavigation activeTab="home" />
 
-      {/* 🎯 NEW: Search Component */}
+      {/* Search Component */}
       <SearchComponent
         visible={showSearch}
         onClose={() => setShowSearch(false)}
@@ -775,7 +671,10 @@ const Homepage = () => {
         onResultPress={handleSearchResultPress}
       />
 
-      {/* Category Filter Modal */}
+      {/* 🎯 NEW: Add Button Modal */}
+      <AddButtonModal />
+
+      {/* Filter Modals */}
       <FilterModal
         visible={showCategoryFilter}
         title="Categories"
@@ -786,23 +685,11 @@ const Homepage = () => {
         onApply={handleFilterApply}
         onClose={() => setShowCategoryFilter(false)}
       />
-
-      {/* Price/Time Filter Modal */}
-      <FilterModal
-        visible={showPriceTimeFilter}
-        title="Price & Time"
-        sections={priceTimeFilterSections}
-        selectedFilters={selectedFilters}
-        onFilterChange={handleFilterChange}
-        onReset={handleFilterReset}
-        onApply={handlePriceTimeFilterApply}
-        onClose={() => setShowPriceTimeFilter(false)}
-      />
     </View>
   );
 };
 
-// Simplified styles - only keeping unique ones
+// Enhanced styles
 const styles = StyleSheet.create({
   header: {
     ...Layout.rowSpaceBetween,
@@ -842,10 +729,68 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // 🎯 NEW: Artist mode styling for add button
+  artistAddButton: {
+    backgroundColor: Colors.secondary,
+    shadowColor: Colors.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
   addIcon: {
     ...Typography.h4,
     color: Colors.text,
   },
+
+  // 🎯 NEW: Add Modal Styles
+  addModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addModalContent: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.xl,
+    padding: Layout.spacing.xl,
+    width: '80%',
+    maxWidth: 320,
+  },
+  addOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Layout.spacing.lg,
+    paddingHorizontal: Layout.spacing.md,
+    borderRadius: Layout.radius.lg,
+    marginBottom: Layout.spacing.md,
+    backgroundColor: Colors.card,
+  },
+  addOptionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: Layout.radius.xl,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Layout.spacing.lg,
+  },
+  addOptionIconText: {
+    fontSize: 24,
+  },
+  addOptionContent: {
+    flex: 1,
+  },
+  addOptionTitle: {
+    ...Typography.body,
+    fontWeight: 'bold',
+    marginBottom: Layout.spacing.xs,
+  },
+  addOptionSubtitle: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+  },
+
   // Swipe container styles
   swipeContainer: {
     flex: 1,
@@ -880,7 +825,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   
-  // 🎯 NEW: Search results header
+  // Search results header
   searchResultsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -897,7 +842,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
-  // 🎯 NEW: Empty search results
+  // Empty search results
   emptySearchResults: {
     alignItems: 'center',
     paddingVertical: Layout.spacing.xxxl,

@@ -1,3 +1,4 @@
+// profile.tsx - Enhanced with Artist Mode Specific Content
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -29,12 +30,19 @@ const ProfilePage = () => {
   const [isSwitching, setIsSwitching] = useState(false);
   const [artistStats, setArtistStats] = useState(null);
   const [clientStats, setClientStats] = useState(null);
+  
+  // 🎯 NEW: Artist-specific data states
+  const [appliedProjects, setAppliedProjects] = useState([]);
+  const [publishedGalleries, setPublishedGalleries] = useState([]);
+  const [portfolioItems, setPortfolioItems] = useState([]);
+  const [recentEarnings, setRecentEarnings] = useState([]);
+  
   const fadeAnim = useState(new Animated.Value(1))[0];
 
-  // 保持原有的所有逻辑函数不变...
   useEffect(() => {
     loadUserInfo();
     loadUserStats();
+    loadArtistData(); // 🎯 NEW: Load artist-specific data
   }, []);
 
   const loadUserInfo = async () => {
@@ -62,6 +70,100 @@ const ProfilePage = () => {
       console.error('Error loading user info:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 🎯 NEW: Load artist-specific data
+  const loadArtistData = async () => {
+    try {
+      // Load applied projects
+      const appliedProjectsData = await AsyncStorage.getItem('appliedProjects');
+      if (appliedProjectsData) {
+        setAppliedProjects(JSON.parse(appliedProjectsData));
+      } else {
+        // Mock data for applied projects
+        const mockAppliedProjects = [
+          {
+            id: 1,
+            title: 'Character Design Commission',
+            status: 'pending',
+            appliedAt: '2025-06-22 10:30',
+            budget: '$200-500',
+            clientName: 'Anonymous Client'
+          },
+          {
+            id: 2,
+            title: 'Anime Portrait Project',
+            status: 'selected',
+            appliedAt: '2025-06-20 14:15',
+            budget: '$150-300',
+            clientName: 'Art Lover'
+          },
+          {
+            id: 3,
+            title: 'Logo Design',
+            status: 'completed',
+            appliedAt: '2025-06-18 09:20',
+            budget: '$100-200',
+            clientName: 'StartupCo'
+          }
+        ];
+        setAppliedProjects(mockAppliedProjects);
+        await AsyncStorage.setItem('appliedProjects', JSON.stringify(mockAppliedProjects));
+      }
+
+      // Load published galleries
+      const galleriesData = await AsyncStorage.getItem('myGalleries');
+      if (galleriesData) {
+        setPublishedGalleries(JSON.parse(galleriesData));
+      } else {
+        // Mock data for published galleries
+        const mockGalleries = [
+          {
+            id: 1,
+            title: 'Anime Style Portrait',
+            price: 89,
+            sold: 13,
+            stock: 5,
+            status: 'active',
+            createdAt: '2025-06-15',
+            image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop'
+          },
+          {
+            id: 2,
+            title: 'Character Design Set',
+            price: 156,
+            sold: 8,
+            stock: 2,
+            status: 'active',
+            createdAt: '2025-06-10',
+            image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop'
+          },
+          {
+            id: 3,
+            title: 'Fantasy Portrait',
+            price: 120,
+            sold: 25,
+            stock: 0,
+            status: 'sold_out',
+            createdAt: '2025-06-05',
+            image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop'
+          }
+        ];
+        setPublishedGalleries(mockGalleries);
+        await AsyncStorage.setItem('myGalleries', JSON.stringify(mockGalleries));
+      }
+
+      // Mock recent earnings data
+      const mockEarnings = [
+        { date: '2025-06-22', amount: 89, source: 'Gallery Sale', title: 'Anime Portrait' },
+        { date: '2025-06-20', amount: 156, source: 'Commission', title: 'Character Design' },
+        { date: '2025-06-18', amount: 120, source: 'Gallery Sale', title: 'Fantasy Art' }
+      ];
+      setRecentEarnings(mockEarnings);
+
+    } catch (error) {
+      console.error('Error loading artist data:', error);
     }
   };
 
@@ -93,7 +195,7 @@ const ProfilePage = () => {
       ]);
 
       return {
-        drafts: drafts ? JSON.parse(drafts).length : 0,
+        drafts: drafts ? JSON.parse(drafts).length : 574,
         followingArtists: followingArtists ? JSON.parse(followingArtists).length : 308,
         galleryCollection: galleryCollection ? JSON.parse(galleryCollection).length : 96,
         purchasedOrders: purchasedGalleries ? JSON.parse(purchasedGalleries).length : 4,
@@ -121,11 +223,13 @@ const ProfilePage = () => {
       const defaultStats = {
         activeCommissions: 12,
         monthlyEarnings: 2847,
-        portfolioItems: 98,
+        portfolioItems: publishedGalleries.length || 3,
         totalSales: 156,
         averageRating: 4.9,
         responseTime: '2h',
-        completionRate: 98
+        completionRate: 98,
+        appliedProjects: appliedProjects.length || 3,
+        selectedProjects: appliedProjects.filter(p => p.status === 'selected').length || 1
       };
       
       await AsyncStorage.setItem('artistStats', JSON.stringify(defaultStats));
@@ -139,18 +243,21 @@ const ProfilePage = () => {
         totalSales: 0,
         averageRating: 0,
         responseTime: 'N/A',
-        completionRate: 0
+        completionRate: 0,
+        appliedProjects: 0,
+        selectedProjects: 0
       };
     }
   };
 
+  // Mode switching logic (keeping existing functionality)
   const handleSwitchMode = async () => {
     if (!userInfo?.isArtist && !isArtistMode) {
       setShowModeSwitch(false);
       
       Alert.alert(
         'Artist Verification Required',
-        'To become an artist on our platform, you need to complete the verification process. This includes:',
+        'To become an artist on our platform, you need to complete the verification process.',
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -195,8 +302,8 @@ const ProfilePage = () => {
       
       const modeTitle = newMode ? 'Welcome to Artist Mode! 🎨' : 'Switched to Client Mode 🛒';
       const modeMessage = newMode 
-        ? 'You can now manage your commissions, view earnings, and update your portfolio. Start creating amazing artwork!'
-        : 'You can now browse artists, commission artwork, and manage your orders. Discover amazing art!';
+        ? 'You can now manage your commissions, view earnings, and update your portfolio.'
+        : 'You can now browse artists, commission artwork, and manage your orders.';
       
       Alert.alert(modeTitle, modeMessage, [{ text: 'Got it!' }]);
       
@@ -227,6 +334,13 @@ const ProfilePage = () => {
     });
   };
 
+  // 🎯 NEW: Artist-specific navigation handlers
+  const handleAppliedProjects = () => router.push('/applied-projects');
+  const handlePublishedGalleries = () => router.push('/published-galleries');
+  const handleEarningsHistory = () => router.push('/earnings-history');
+  const handleCommissionRequests = () => router.push('/commission-requests');
+
+  // Client mode handlers (keeping existing)
   const handleMyDrafts = () => router.push('/my-drafts');
   const handleFollowingArtists = () => router.push('/following-artists');
   const handleGalleryCollection = () => router.push('/gallery-collection');
@@ -252,6 +366,241 @@ const ProfilePage = () => {
     };
   };
 
+  // 🎯 NEW: Render artist-specific stats
+  const renderArtistStats = () => (
+    <View style={styles.statsContainer}>
+      <TouchableOpacity 
+        style={styles.statItem}
+        onPress={handleAppliedProjects}
+      >
+        <Text style={styles.statNumber}>{artistStats?.appliedProjects || appliedProjects.length}</Text>
+        <Text style={styles.statLabel}>Applied Projects</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.statItem}
+        onPress={handlePublishedGalleries}
+      >
+        <Text style={styles.statNumber}>{publishedGalleries.length}</Text>
+        <Text style={styles.statLabel}>Published Galleries</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.statItem}
+        onPress={handleEarnings}
+      >
+        <Text style={styles.statNumber}>${artistStats?.monthlyEarnings?.toLocaleString() || '2,847'}</Text>
+        <Text style={styles.statLabel}>This Month</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // 🎯 NEW: Render artist-specific content
+  const renderArtistContent = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Artist Dashboard</Text>
+        <TouchableOpacity 
+          style={styles.dashboardButton}
+          onPress={handleArtistDashboard}
+        >
+          <Text style={styles.dashboardIcon}>📊</Text>
+          <Text style={styles.dashboardText}>View Dashboard</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Artist Performance Summary */}
+      <View style={styles.performanceSummary}>
+        <View style={styles.performanceItem}>
+          <Text style={styles.performanceValue}>{artistStats?.completionRate || 98}%</Text>
+          <Text style={styles.performanceLabel}>Completion Rate</Text>
+        </View>
+        <View style={styles.performanceItem}>
+          <Text style={styles.performanceValue}>{artistStats?.responseTime || '2h'}</Text>
+          <Text style={styles.performanceLabel}>Avg Response</Text>
+        </View>
+        <View style={styles.performanceItem}>
+          <Text style={styles.performanceValue}>⭐ {artistStats?.averageRating || 4.9}</Text>
+          <Text style={styles.performanceLabel}>Rating</Text>
+        </View>
+      </View>
+
+      {/* Applied Projects Section */}
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={handleAppliedProjects}
+      >
+        <View style={styles.orderLeft}>
+          <Text style={styles.orderIcon}>📋</Text>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Applied Projects</Text>
+            <Text style={styles.orderSubtitle}>Track your project applications</Text>
+          </View>
+        </View>
+        <View style={styles.orderRight}>
+          <StatusBadge 
+            status="pending" 
+            text={appliedProjects.filter(p => p.status === 'pending').length.toString()}
+            size="small"
+          />
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Published Galleries Section */}
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={handlePublishedGalleries}
+      >
+        <View style={styles.orderLeft}>
+          <Text style={styles.orderIcon}>🖼️</Text>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Published Galleries</Text>
+            <Text style={styles.orderSubtitle}>Manage your artwork listings</Text>
+          </View>
+        </View>
+        <View style={styles.orderRight}>
+          <Text style={styles.orderCount}>{publishedGalleries.length} active listings</Text>
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Earnings Section */}
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={handleEarningsHistory}
+      >
+        <View style={styles.orderLeft}>
+          <Text style={styles.orderIcon}>💰</Text>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Earnings & Payouts</Text>
+            <Text style={styles.orderSubtitle}>Income and payment history</Text>
+          </View>
+        </View>
+        <View style={styles.orderRight}>
+          <Text style={styles.orderCount}>${artistStats?.monthlyEarnings?.toLocaleString() || '2,847'} this month</Text>
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Commission Requests */}
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={handleCommissionRequests}
+      >
+        <View style={styles.orderLeft}>
+          <Text style={styles.orderIcon}>🎨</Text>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Commission Requests</Text>
+            <Text style={styles.orderSubtitle}>Direct commission inquiries</Text>
+          </View>
+        </View>
+        <View style={styles.orderRight}>
+          <StatusBadge 
+            status="active" 
+            text="3"
+            size="small"
+          />
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Recent Activity Summary */}
+      <View style={styles.recentActivity}>
+        <Text style={styles.activityTitle}>Recent Activity</Text>
+        {recentEarnings.slice(0, 3).map((earning, index) => (
+          <View key={index} style={styles.activityItem}>
+            <View style={styles.activityInfo}>
+              <Text style={styles.activityDescription}>{earning.source}: {earning.title}</Text>
+              <Text style={styles.activityDate}>{earning.date}</Text>
+            </View>
+            <Text style={styles.activityAmount}>+${earning.amount}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  // Render client content (keeping existing)
+  const renderClientContent = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>My Commissions</Text>
+        <TouchableOpacity 
+          style={styles.calendarButton}
+          onPress={handleViewCalendar}
+        >
+          <Text style={styles.calendarIcon}>📅</Text>
+          <Text style={styles.calendarText}>View Calendar</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Client Menu Items */}
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={() => router.push('/purchased-gallery')}
+      >
+        <View style={styles.orderLeft}>
+          <Text style={styles.orderIcon}>🖼️</Text>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Gallery Orders</Text>
+            <Text style={styles.orderSubtitle}>Purchased artwork and commissions</Text>
+          </View>
+        </View>
+        <View style={styles.orderRight}>
+          <Text style={styles.orderCount}>{clientStats?.purchasedOrders} orders purchased</Text>
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={handlePendingReviews}
+      >
+        <View style={styles.orderLeft}>
+          <StatusBadge 
+            status="pending" 
+            text={clientStats?.pendingReviews.toString()}
+            size="small"
+          />
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Pending Reviews</Text>
+            <Text style={styles.orderSubtitle}>Rate your completed orders</Text>
+          </View>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.orderItem}
+        onPress={() => router.push('/my-projects')}
+      >
+        <View style={styles.orderLeft}>
+          <Text style={styles.orderIcon}>📋</Text>
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>Project Collaborations</Text>
+            <Text style={styles.orderSubtitle}>Custom project requests</Text>
+          </View>
+        </View>
+        <View style={styles.orderRight}>
+          <Text style={styles.orderCount}>3 projects in progress</Text>
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Client Status Indicators */}
+      <View style={styles.statusIndicators}>
+        <View style={styles.statusItem}>
+          <StatusBadge status="pending" text="10" size="small" />
+          <Text style={styles.statusText}>Pending Payment</Text>
+        </View>
+        <View style={styles.statusItem}>
+          <StatusBadge status="active" text={clientStats?.pendingReviews.toString() || "1"} size="small" />
+          <Text style={styles.statusText}>Pending Reviews</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Mode switch modal (keeping existing)
   const renderModeSwitchModal = () => (
     <Modal
       visible={showModeSwitch}
@@ -290,11 +639,6 @@ const ProfilePage = () => {
                 <Text style={styles.modeDescription}>
                   Browse artists, commission artwork, and manage your orders
                 </Text>
-                <View style={styles.modeFeatures}>
-                  <Text style={styles.featureText}>• Browse artist galleries</Text>
-                  <Text style={styles.featureText}>• Commission custom artwork</Text>
-                  <Text style={styles.featureText}>• Track order progress</Text>
-                </View>
               </View>
               {!isArtistMode && (
                 <View style={styles.activeIndicator}>
@@ -333,22 +677,6 @@ const ProfilePage = () => {
                 <Text style={styles.modeDescription}>
                   Manage commissions, upload artwork, and track earnings
                 </Text>
-                {userInfo?.isArtist ? (
-                  <View style={styles.modeFeatures}>
-                    <Text style={styles.featureText}>• Manage commissions</Text>
-                    <Text style={styles.featureText}>• Track earnings & payouts</Text>
-                    <Text style={styles.featureText}>• Portfolio management</Text>
-                  </View>
-                ) : (
-                  <View style={styles.verificationRequired}>
-                    <Text style={styles.verificationText}>
-                      ⚠️ Requires artist verification
-                    </Text>
-                    <Text style={styles.verificationSubtext}>
-                      Complete identity verification and portfolio submission
-                    </Text>
-                  </View>
-                )}
               </View>
               {isArtistMode && (
                 <View style={styles.activeIndicator}>
@@ -396,7 +724,7 @@ const ProfilePage = () => {
 
   return (
     <View style={GlobalStyles.container}>
-      {/* Header Actions - 与其他页面保持一致的布局 */}
+      {/* Header Actions */}
       <View style={styles.headerActions}>
         <TouchableOpacity 
           style={[
@@ -489,239 +817,35 @@ const ProfilePage = () => {
           </TouchableOpacity>
 
           {/* Dynamic Stats based on mode */}
-          <View style={styles.statsContainer}>
-            {isArtistMode && artistStats ? (
-              // Artist mode stats
-              <>
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={handleManageCommissions}
-                >
-                  <Text style={styles.statNumber}>{artistStats.activeCommissions}</Text>
-                  <Text style={styles.statLabel}>Active Commissions</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={handleEarnings}
-                >
-                  <Text style={styles.statNumber}>${artistStats.monthlyEarnings.toLocaleString()}</Text>
-                  <Text style={styles.statLabel}>This Month</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={handlePortfolioManagement}
-                >
-                  <Text style={styles.statNumber}>{artistStats.portfolioItems}</Text>
-                  <Text style={styles.statLabel}>Portfolio Items</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              // Client mode stats
-              <>
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={handleMyDrafts}
-                >
-                  <Text style={styles.statNumber}>{clientStats?.drafts || 574}</Text>
-                  <Text style={styles.statLabel}>My Drafts</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={handleFollowingArtists}
-                >
-                  <Text style={styles.statNumber}>{clientStats?.followingArtists || 308}</Text>
-                  <Text style={styles.statLabel}>Following Artists</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.statItem}
-                  onPress={handleGalleryCollection}
-                >
-                  <Text style={styles.statNumber}>{clientStats?.galleryCollection || 96}</Text>
-                  <Text style={styles.statLabel}>Gallery Collection</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          {isArtistMode ? renderArtistStats() : (
+            <View style={styles.statsContainer}>
+              <TouchableOpacity 
+                style={styles.statItem}
+                onPress={handleMyDrafts}
+              >
+                <Text style={styles.statNumber}>{clientStats?.drafts || 574}</Text>
+                <Text style={styles.statLabel}>My Drafts</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.statItem}
+                onPress={handleFollowingArtists}
+              >
+                <Text style={styles.statNumber}>{clientStats?.followingArtists || 308}</Text>
+                <Text style={styles.statLabel}>Following Artists</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.statItem}
+                onPress={handleGalleryCollection}
+              >
+                <Text style={styles.statNumber}>{clientStats?.galleryCollection || 96}</Text>
+                <Text style={styles.statLabel}>Gallery Collection</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Dynamic Content based on mode */}
-        {isArtistMode ? (
-          // Artist Mode Content
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Artist Dashboard</Text>
-              <TouchableOpacity 
-                style={styles.dashboardButton}
-                onPress={handleArtistDashboard}
-              >
-                <Text style={styles.dashboardIcon}>📊</Text>
-                <Text style={styles.dashboardText}>View Dashboard</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Artist Performance Summary */}
-            <View style={styles.performanceSummary}>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceValue}>{artistStats?.completionRate}%</Text>
-                <Text style={styles.performanceLabel}>Completion Rate</Text>
-              </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceValue}>{artistStats?.responseTime}</Text>
-                <Text style={styles.performanceLabel}>Avg Response</Text>
-              </View>
-              <View style={styles.performanceItem}>
-                <Text style={styles.performanceValue}>⭐ {artistStats?.averageRating}</Text>
-                <Text style={styles.performanceLabel}>Rating</Text>
-              </View>
-            </View>
-
-            {/* Artist Menu Items */}
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={handleManageCommissions}
-            >
-              <View style={styles.orderLeft}>
-                <Text style={styles.orderIcon}>🎨</Text>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Manage Commissions</Text>
-                  <Text style={styles.orderSubtitle}>Active orders and requests</Text>
-                </View>
-              </View>
-              <View style={styles.orderRight}>
-                <StatusBadge 
-                  status="in_progress" 
-                  text={artistStats?.activeCommissions.toString()}
-                  size="small"
-                />
-                <Text style={styles.chevron}>›</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={handleEarnings}
-            >
-              <View style={styles.orderLeft}>
-                <Text style={styles.orderIcon}>💰</Text>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Earnings & Payouts</Text>
-                  <Text style={styles.orderSubtitle}>Income and payment history</Text>
-                </View>
-              </View>
-              <View style={styles.orderRight}>
-                <Text style={styles.orderCount}>${artistStats?.monthlyEarnings?.toLocaleString()} this month</Text>
-                <Text style={styles.chevron}>›</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={handlePortfolioManagement}
-            >
-              <View style={styles.orderLeft}>
-                <Text style={styles.orderIcon}>🖼️</Text>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Portfolio Management</Text>
-                  <Text style={styles.orderSubtitle}>Upload and organize your work</Text>
-                </View>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={handleArtistAnalytics}
-            >
-              <View style={styles.orderLeft}>
-                <Text style={styles.orderIcon}>📈</Text>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Analytics & Insights</Text>
-                  <Text style={styles.orderSubtitle}>Performance metrics and trends</Text>
-                </View>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          // Client Mode Content
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>My Commissions</Text>
-              <TouchableOpacity 
-                style={styles.calendarButton}
-                onPress={handleViewCalendar}
-              >
-                <Text style={styles.calendarIcon}>📅</Text>
-                <Text style={styles.calendarText}>View Calendar</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Client Menu Items */}
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={() => router.push('/purchased-gallery')}
-            >
-              <View style={styles.orderLeft}>
-                <Text style={styles.orderIcon}>🖼️</Text>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Gallery Orders</Text>
-                  <Text style={styles.orderSubtitle}>Purchased artwork and commissions</Text>
-                </View>
-              </View>
-              <View style={styles.orderRight}>
-                <Text style={styles.orderCount}>{clientStats?.purchasedOrders} orders purchased</Text>
-                <Text style={styles.chevron}>›</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={handlePendingReviews}
-            >
-              <View style={styles.orderLeft}>
-                <StatusBadge 
-                  status="pending" 
-                  text={clientStats?.pendingReviews.toString()}
-                  size="small"
-                />
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Pending Reviews</Text>
-                  <Text style={styles.orderSubtitle}>Rate your completed orders</Text>
-                </View>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.orderItem}
-              onPress={() => router.push('/my-projects')}
-            >
-              <View style={styles.orderLeft}>
-                <Text style={styles.orderIcon}>📋</Text>
-                <View style={styles.orderInfo}>
-                  <Text style={styles.orderTitle}>Project Collaborations</Text>
-                  <Text style={styles.orderSubtitle}>Custom project requests</Text>
-                </View>
-              </View>
-              <View style={styles.orderRight}>
-                <Text style={styles.orderCount}>3 projects in progress</Text>
-                <Text style={styles.chevron}>›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Client Status Indicators */}
-            <View style={styles.statusIndicators}>
-              <View style={styles.statusItem}>
-                <StatusBadge status="pending" text="10" size="small" />
-                <Text style={styles.statusText}>Pending Payment</Text>
-              </View>
-              <View style={styles.statusItem}>
-                <StatusBadge status="active" text={clientStats?.pendingReviews.toString() || "1"} size="small" />
-                <Text style={styles.statusText}>Pending Reviews</Text>
-              </View>
-            </View>
-          </View>
-        )}
+        {isArtistMode ? renderArtistContent() : renderClientContent()}
 
         <View style={GlobalStyles.bottomPadding} />
       </Animated.ScrollView>
@@ -732,17 +856,17 @@ const ProfilePage = () => {
   );
 };
 
-// 简化样式 - 使用组件库的样式系统
+// Enhanced styles with new artist-specific components
 const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
 
-  // Header Actions - 与其他页面保持一致
+  // Header Actions
   headerActions: {
     ...Layout.rowSpaceBetween,
     ...Layout.paddingHorizontal,
-    paddingTop: 50, // 与其他页面一致的状态栏高度
+    paddingTop: 50,
     paddingBottom: Layout.spacing.lg,
   },
   modeSwitchButton: {
@@ -1003,6 +1127,42 @@ const styles = StyleSheet.create({
     marginRight: Layout.spacing.sm,
   },
 
+  // 🎯 NEW: Recent Activity Styles
+  recentActivity: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    marginTop: Layout.spacing.lg,
+  },
+  activityTitle: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.md,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Layout.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityDescription: {
+    ...Typography.bodySmall,
+    marginBottom: 2,
+  },
+  activityDate: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+  },
+  activityAmount: {
+    ...Typography.bodySmall,
+    color: Colors.success,
+    fontWeight: 'bold',
+  },
+
   // Status Indicators
   statusIndicators: {
     ...Layout.row,
@@ -1020,7 +1180,7 @@ const styles = StyleSheet.create({
     marginTop: Layout.spacing.xs,
   },
 
-  // Modal Styles
+  // Modal Styles (keeping existing)
   modalOverlay: {
     ...Layout.modalOverlay,
   },
@@ -1099,30 +1259,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 20,
     marginBottom: Layout.spacing.md,
-  },
-  modeFeatures: {
-    marginTop: Layout.spacing.sm,
-  },
-  featureText: {
-    ...Typography.caption,
-    marginBottom: Layout.spacing.xs,
-  },
-  verificationRequired: {
-    backgroundColor: Colors.card,
-    borderRadius: Layout.radius.sm,
-    padding: Layout.spacing.md,
-    marginTop: Layout.spacing.sm,
-  },
-  verificationText: {
-    ...Typography.caption,
-    color: Colors.warning,
-    fontWeight: 'bold',
-    marginBottom: Layout.spacing.xs,
-  },
-  verificationSubtext: {
-    ...Typography.caption,
-    color: Colors.textSecondary,
-    fontSize: 11,
   },
   activeIndicator: {
     width: 32,

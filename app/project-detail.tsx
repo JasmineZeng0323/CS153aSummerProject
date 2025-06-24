@@ -1,11 +1,15 @@
+// project-detail.tsx - Enhanced with Artist Application Feature
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -35,9 +39,19 @@ const ProjectDetailPage = () => {
 
   const [activeTab, setActiveTab] = useState('Applicants');
   const [showTipCard, setShowTipCard] = useState(true);
-  
-  // 招募状态管理
   const [isRecruiting, setIsRecruiting] = useState(true);
+  
+  // 🎯 NEW: Artist application states
+  const [isArtistMode, setIsArtistMode] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
+  const [applicationData, setApplicationData] = useState({
+    coverLetter: '',
+    proposedTimeline: '',
+    portfolioLinks: '',
+    rate: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Mock data for artists
   const [applicantArtists, setApplicantArtists] = useState([
@@ -90,10 +104,276 @@ const ProjectDetailPage = () => {
     }
   ]);
 
-  // Selected artists - dynamically updated when artists are selected
   const [selectedArtists, setSelectedArtists] = useState([]);
 
-  // 处理招募状态切换
+  // 🎯 NEW: Load user mode and application status
+  useEffect(() => {
+    loadUserMode();
+    checkApplicationStatus();
+  }, [projectId]);
+
+  const loadUserMode = async () => {
+    try {
+      const userInfoString = await AsyncStorage.getItem('userInfo');
+      const savedMode = await AsyncStorage.getItem('isArtistMode');
+      
+      if (userInfoString) {
+        const userData = JSON.parse(userInfoString);
+        const artistMode = savedMode === 'true' && userData.isArtist;
+        setIsArtistMode(artistMode);
+      }
+    } catch (error) {
+      console.error('Error loading user mode:', error);
+    }
+  };
+
+  const checkApplicationStatus = async () => {
+    try {
+      const appliedProjectsData = await AsyncStorage.getItem('appliedProjects');
+      if (appliedProjectsData) {
+        const appliedProjects = JSON.parse(appliedProjectsData);
+        const hasAppliedToThisProject = appliedProjects.some(
+          (project: any) => project.id.toString() === projectId
+        );
+        setHasApplied(hasAppliedToThisProject);
+      }
+    } catch (error) {
+      console.error('Error checking application status:', error);
+    }
+  };
+
+  // 🎯 NEW: Handle artist application
+  const handleApplyProject = () => {
+    if (!isArtistMode) {
+      Alert.alert(
+        'Artist Mode Required',
+        'Switch to Artist Mode to apply for projects.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Switch Mode', onPress: () => router.push('/profile') }
+        ]
+      );
+      return;
+    }
+
+    if (hasApplied) {
+      Alert.alert(
+        'Already Applied',
+        'You have already applied for this project. Check your application status in your profile.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setShowApplicationModal(true);
+  };
+
+  const submitApplication = async () => {
+    if (!applicationData.coverLetter.trim()) {
+      Alert.alert('Missing Information', 'Please write a cover letter explaining why you\'re interested in this project.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Save application to local storage
+      const newApplication = {
+        id: parseInt(projectId as string),
+        title: title,
+        status: 'pending',
+        appliedAt: new Date().toLocaleString('en-US', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        }),
+        budget: budget,
+        clientName: 'Project Client',
+        coverLetter: applicationData.coverLetter,
+        proposedTimeline: applicationData.proposedTimeline,
+        portfolioLinks: applicationData.portfolioLinks,
+        rate: applicationData.rate
+      };
+
+      // Update applied projects
+      const existingApplications = await AsyncStorage.getItem('appliedProjects');
+      const applications = existingApplications ? JSON.parse(existingApplications) : [];
+      applications.push(newApplication);
+      await AsyncStorage.setItem('appliedProjects', JSON.stringify(applications));
+
+      // Update applicant count (simulate)
+      setApplicantArtists(prev => [...prev, {
+        id: Date.now(),
+        name: 'You',
+        avatar: 'https://i.pravatar.cc/60?img=10',
+        rating: 4.9,
+        completedProjects: 50,
+        responseTime: '1h',
+        appliedAt: new Date().toLocaleString(),
+        portfolio: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
+        isSelected: false
+      }]);
+
+      setHasApplied(true);
+      setShowApplicationModal(false);
+
+      Alert.alert(
+        'Application Submitted! 🎉',
+        'Your application has been sent to the client. You can track the status in your profile under "Applied Projects".',
+        [
+          {
+            text: 'View My Applications',
+            onPress: () => router.push('/applied-projects')
+          },
+          { text: 'OK' }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      Alert.alert('Error', 'Failed to submit application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 🎯 NEW: Application Modal Component
+  const ApplicationModal = () => (
+    <Modal
+      visible={showApplicationModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowApplicationModal(false)}
+    >
+      <View style={styles.applicationModalOverlay}>
+        <View style={styles.applicationModalContent}>
+          {/* Header */}
+          <View style={styles.applicationModalHeader}>
+            <Text style={styles.applicationModalTitle}>Apply for Project</Text>
+            <TouchableOpacity 
+              onPress={() => setShowApplicationModal(false)}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.applicationForm} showsVerticalScrollIndicator={false}>
+            {/* Project Info Summary */}
+            <View style={styles.projectSummary}>
+              <Text style={styles.projectSummaryTitle}>{title}</Text>
+              <Text style={styles.projectSummaryMeta}>Budget: {budget} • Deadline: {deadline}</Text>
+            </View>
+
+            {/* Cover Letter */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Cover Letter *</Text>
+              <Text style={styles.formHint}>Explain why you're perfect for this project</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={applicationData.coverLetter}
+                onChangeText={(text) => setApplicationData(prev => ({ ...prev, coverLetter: text }))}
+                placeholder="Dear client, I'm excited about this project because..."
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={6}
+                maxLength={500}
+              />
+              <Text style={styles.characterCount}>{applicationData.coverLetter.length}/500</Text>
+            </View>
+
+            {/* Proposed Timeline */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Proposed Timeline</Text>
+              <TextInput
+                style={styles.textInput}
+                value={applicationData.proposedTimeline}
+                onChangeText={(text) => setApplicationData(prev => ({ ...prev, proposedTimeline: text }))}
+                placeholder="e.g., 5-7 days for completion"
+                placeholderTextColor={Colors.textMuted}
+              />
+            </View>
+
+            {/* Your Rate */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Your Rate (Optional)</Text>
+              <Text style={styles.formHint}>Specify your rate if different from budget</Text>
+              <View style={styles.rateInputContainer}>
+                <Text style={styles.rateSymbol}>$</Text>
+                <TextInput
+                  style={styles.rateInput}
+                  value={applicationData.rate}
+                  onChangeText={(text) => setApplicationData(prev => ({ ...prev, rate: text.replace(/[^0-9]/g, '') }))}
+                  placeholder="250"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Portfolio Links */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Relevant Portfolio Links</Text>
+              <Text style={styles.formHint}>Share links to similar work</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={applicationData.portfolioLinks}
+                onChangeText={(text) => setApplicationData(prev => ({ ...prev, portfolioLinks: text }))}
+                placeholder="https://your-portfolio.com/project1&#10;https://instagram.com/your-art"
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Application Tips */}
+            <View style={styles.applicationTips}>
+              <Text style={styles.tipsTitle}>💡 Application Tips</Text>
+              <Text style={styles.tipsText}>
+                • Be specific about your experience with similar projects{'\n'}
+                • Include relevant portfolio samples{'\n'}
+                • Mention your understanding of the project requirements{'\n'}
+                • Be professional and enthusiastic
+              </Text>
+            </View>
+          </ScrollView>
+
+          {/* Submit Button */}
+          <View style={styles.applicationModalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowApplicationModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.submitButton,
+                (!applicationData.coverLetter.trim() || isSubmitting) && styles.disabledButton
+              ]}
+              onPress={submitApplication}
+              disabled={!applicationData.coverLetter.trim() || isSubmitting}
+            >
+              {isSubmitting ? (
+                <Text style={styles.submitButtonText}>Submitting...</Text>
+              ) : (
+                <Text style={styles.submitButtonText}>Submit Application</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // 招募状态管理
   const handleRecruitingToggle = () => {
     const newStatus = !isRecruiting;
     
@@ -109,7 +389,6 @@ const ProjectDetailPage = () => {
           text: 'Confirm',
           onPress: () => {
             setIsRecruiting(newStatus);
-            // 这里可以添加 API 调用来更新服务器上的状态
             console.log(`Project ${projectId} recruiting status changed to: ${newStatus ? 'Open' : 'Closed'}`);
           },
         },
@@ -127,10 +406,8 @@ const ProjectDetailPage = () => {
   };
 
   const handleSelectArtist = (artistId) => {
-    // Find the artist being selected/deselected
     const artist = applicantArtists.find(a => a.id === artistId);
     
-    // Update applicant artists selection status
     setApplicantArtists(prev => 
       prev.map(artist => 
         artist.id === artistId 
@@ -139,15 +416,12 @@ const ProjectDetailPage = () => {
       )
     );
 
-    // Update selected artists list
     setSelectedArtists(prev => {
       const isCurrentlySelected = prev.some(a => a.id === artistId);
       
       if (isCurrentlySelected) {
-        // Remove from selected list
         return prev.filter(a => a.id !== artistId);
       } else {
-        // Add to selected list with selection timestamp
         const selectedArtist = {
           ...artist,
           selectedAt: new Date().toLocaleString('en-US', { 
@@ -168,10 +442,8 @@ const ProjectDetailPage = () => {
   };
 
   const handleDeselectArtist = (artistId) => {
-    // Remove from selected artists
     setSelectedArtists(prev => prev.filter(a => a.id !== artistId));
     
-    // Update applicant status
     setApplicantArtists(prev => 
       prev.map(artist => 
         artist.id === artistId 
@@ -182,7 +454,6 @@ const ProjectDetailPage = () => {
   };
 
   const handleInviteArtist = () => {
-    // Navigate to artist search/invite page
     router.push('/invite-artists');
   };
 
@@ -313,47 +584,75 @@ const ProjectDetailPage = () => {
 
   return (
     <View style={GlobalStyles.container}>
-      {/* Header with unified padding - 手动实现以保持与其他页面一致 */}
+      {/* Header with unified padding */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Project Details</Text>
         
-        {/* 招募状态切换按钮 */}
-        <TouchableOpacity 
-          style={[
-            styles.recruitingToggle,
-            { backgroundColor: isRecruiting ? Colors.success : Colors.textMuted }
-          ]}
-          onPress={handleRecruitingToggle}
-        >
-          <View style={[
-            styles.toggleIndicator,
-            { 
-              backgroundColor: Colors.text,
-              transform: [{ translateX: isRecruiting ? 0 : 14 }]
-            }
-          ]} />
-          <Text style={[
-            styles.recruitingText,
-            { 
-              marginLeft: isRecruiting ? 28 : 8,
-              color: Colors.text
-            }
-          ]}>
-            {isRecruiting ? 'Recruiting' : 'Recruiting Closed'}
-          </Text>
-        </TouchableOpacity>
+        {/* 🎯 NEW: Show Apply/Applied button for artists, or recruiting toggle for clients */}
+        {isArtistMode ? (
+          <TouchableOpacity 
+            style={[
+              styles.applyButton,
+              hasApplied && styles.appliedButton
+            ]}
+            onPress={handleApplyProject}
+            disabled={hasApplied}
+          >
+            <Text style={[
+              styles.applyButtonText,
+              hasApplied && styles.appliedButtonText
+            ]}>
+              {hasApplied ? '✓ Applied' : 'Apply'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={[
+              styles.recruitingToggle,
+              { backgroundColor: isRecruiting ? Colors.success : Colors.textMuted }
+            ]}
+            onPress={handleRecruitingToggle}
+          >
+            <View style={[
+              styles.toggleIndicator,
+              { 
+                backgroundColor: Colors.text,
+                transform: [{ translateX: isRecruiting ? 0 : 14 }]
+              }
+            ]} />
+            <Text style={[
+              styles.recruitingText,
+              { 
+                marginLeft: isRecruiting ? 28 : 8,
+                color: Colors.text
+              }
+            ]}>
+              {isRecruiting ? 'Recruiting' : 'Closed'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 招募状态提示 */}
-        {!isRecruiting && (
+        {!isRecruiting && !isArtistMode && (
           <View style={styles.recruitingClosedBanner}>
             <Text style={styles.bannerIcon}>🚫</Text>
             <Text style={styles.bannerText}>
               This project is no longer accepting new applications. Artists cannot see this project in the project list.
+            </Text>
+          </View>
+        )}
+
+        {/* 🎯 NEW: Project not available message for artists */}
+        {!isRecruiting && isArtistMode && (
+          <View style={styles.projectUnavailableBanner}>
+            <Text style={styles.bannerIcon}>⏰</Text>
+            <Text style={styles.bannerText}>
+              This project is no longer accepting applications. The client has closed recruitment.
             </Text>
           </View>
         )}
@@ -364,6 +663,14 @@ const ProjectDetailPage = () => {
           <Text style={styles.projectMeta}>
             Deadline: {deadline} • 39 days left
           </Text>
+          
+          {/* 🎯 NEW: Show project description for artists */}
+          {isArtistMode && description && (
+            <View style={styles.projectDescription}>
+              <Text style={styles.descriptionTitle}>Project Description</Text>
+              <Text style={styles.descriptionText}>{description}</Text>
+            </View>
+          )}
         </View>
 
         {/* Tip Card */}
@@ -378,44 +685,101 @@ const ProjectDetailPage = () => {
             <View style={styles.tipContent}>
               <Text style={styles.tipIcon}>🎨</Text>
               <View style={styles.tipTextContainer}>
-                <Text style={styles.tipTitle}>First time commissioning? Not sure about the process?</Text>
-                <Text style={styles.tipSubtitle}>Click to view MiPainter commission process guide</Text>
+                <Text style={styles.tipTitle}>
+                  {isArtistMode 
+                    ? 'Ready to apply for this project?' 
+                    : 'First time commissioning? Not sure about the process?'
+                  }
+                </Text>
+                <Text style={styles.tipSubtitle}>
+                  {isArtistMode 
+                    ? 'Make sure to read the requirements carefully and showcase relevant work'
+                    : 'Click to view MiPainter commission process guide'
+                  }
+                </Text>
               </View>
             </View>
           </View>
         )}
 
-        {/* Tab Navigation */}
-        <View style={styles.tabNavigation}>
-          {['Applicants', 'Invited', 'Selected'].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabButtonText, activeTab === tab && styles.activeTabButtonText]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* 🎯 NEW: Different content based on user mode */}
+        {isArtistMode ? (
+          // Artist view - show project requirements and application status
+          <View style={styles.artistProjectView}>
+            <Text style={styles.sectionTitle}>Project Requirements</Text>
+            <View style={styles.requirementsList}>
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementLabel}>Budget Range:</Text>
+                <Text style={styles.requirementValue}>{budget}</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementLabel}>Category:</Text>
+                <Text style={styles.requirementValue}>{category}</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementLabel}>Deadline:</Text>
+                <Text style={styles.requirementValue}>{deadline}</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Text style={styles.requirementLabel}>Applications:</Text>
+                <Text style={styles.requirementValue}>{applicantCount} artists applied</Text>
+              </View>
+            </View>
 
-        {/* Tab Content */}
-        {renderTabContent()}
+            {hasApplied && (
+              <View style={styles.applicationStatusCard}>
+                <StatusBadge status="pending" text="Application Pending" size="small" />
+                <Text style={styles.applicationStatusText}>
+                  Your application is under review. You'll be notified of any updates.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.viewApplicationButton}
+                  onPress={() => router.push('/applied-projects')}
+                >
+                  <Text style={styles.viewApplicationButtonText}>View My Applications</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        ) : (
+          // Client view - show applicant management tabs
+          <>
+            {/* Tab Navigation */}
+            <View style={styles.tabNavigation}>
+              {['Applicants', 'Invited', 'Selected'].map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[styles.tabButtonText, activeTab === tab && styles.activeTabButtonText]}>
+                    {tab}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Tab Content */}
+            {renderTabContent()}
+          </>
+        )}
 
         <View style={GlobalStyles.bottomPadding} />
       </ScrollView>
+
+      {/* 🎯 NEW: Application Modal */}
+      <ApplicationModal />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  // Header - 与其他页面保持完全一致
+  // Header
   header: {
     ...Layout.rowSpaceBetween,
     alignItems: 'center',
     paddingHorizontal: Layout.spacing.xl,
-    paddingTop: 50, // 关键！与其他页面一致的状态栏高度
+    paddingTop: 50,
     paddingBottom: Layout.spacing.lg,
     ...Layout.borderBottom,
   },
@@ -435,8 +799,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  content: {
-    flex: 1,
+  // 🎯 NEW: Apply Button Styles
+  applyButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.lg,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.radius.xl,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  appliedButton: {
+    backgroundColor: Colors.success,
+  },
+  applyButtonText: {
+    ...Typography.buttonSmall,
+    color: Colors.text,
+    fontWeight: 'bold',
+  },
+  appliedButtonText: {
+    color: Colors.text,
   },
 
   // 招募状态切换按钮
@@ -447,7 +828,7 @@ const styles = StyleSheet.create({
     paddingVertical: Layout.spacing.sm,
     borderRadius: Layout.radius.xl,
     position: 'relative',
-    minWidth: 140,
+    minWidth: 100,
   },
   toggleIndicator: {
     width: 12,
@@ -461,9 +842,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  content: {
+    flex: 1,
+  },
+
   // 招募关闭横幅
   recruitingClosedBanner: {
     backgroundColor: Colors.warning,
+    marginHorizontal: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+    padding: Layout.spacing.lg,
+    borderRadius: Layout.radius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  // 🎯 NEW: Project unavailable banner for artists
+  projectUnavailableBanner: {
+    backgroundColor: Colors.error,
     marginHorizontal: Layout.spacing.xl,
     marginBottom: Layout.spacing.lg,
     padding: Layout.spacing.lg,
@@ -494,6 +890,23 @@ const styles = StyleSheet.create({
   },
   projectMeta: {
     ...Typography.bodySmallMuted,
+  },
+  
+  // 🎯 NEW: Project Description for Artists
+  projectDescription: {
+    marginTop: Layout.spacing.lg,
+    paddingTop: Layout.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  descriptionTitle: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.md,
+  },
+  descriptionText: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
 
   // Tip Card
@@ -539,6 +952,62 @@ const styles = StyleSheet.create({
   tipSubtitle: {
     ...Typography.bodySmall,
     color: '#666',
+  },
+
+  // 🎯 NEW: Artist Project View
+  artistProjectView: {
+    ...Layout.paddingHorizontal,
+  },
+  sectionTitle: {
+    ...Typography.h5,
+    marginBottom: Layout.spacing.lg,
+  },
+  requirementsList: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    marginBottom: Layout.spacing.lg,
+  },
+  requirementItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Layout.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  requirementLabel: {
+    ...Typography.body,
+    color: Colors.textMuted,
+  },
+  requirementValue: {
+    ...Typography.body,
+    fontWeight: '600',
+  },
+  
+  // 🎯 NEW: Application Status Card
+  applicationStatusCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    alignItems: 'center',
+  },
+  applicationStatusText: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginVertical: Layout.spacing.md,
+    lineHeight: 20,
+  },
+  viewApplicationButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.radius.md,
+  },
+  viewApplicationButtonText: {
+    ...Typography.buttonSmall,
+    color: Colors.text,
   },
   
   // Tab Navigation
@@ -654,6 +1123,152 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: 'bold',
     color: Colors.primary,
+  },
+
+  // 🎯 NEW: Application Modal Styles
+  applicationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  applicationModalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: Layout.radius.xl,
+    borderTopRightRadius: Layout.radius.xl,
+    maxHeight: '85%',
+  },
+  applicationModalHeader: {
+    ...Layout.rowSpaceBetween,
+    alignItems: 'center',
+    padding: Layout.spacing.xl,
+    ...Layout.borderBottom,
+  },
+  applicationModalTitle: {
+    ...Typography.h5,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: Layout.radius.lg,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: Colors.textMuted,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  applicationForm: {
+    flex: 1,
+    padding: Layout.spacing.xl,
+  },
+  projectSummary: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    marginBottom: Layout.spacing.xl,
+  },
+  projectSummaryTitle: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.xs,
+  },
+  projectSummaryMeta: {
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
+  },
+  formSection: {
+    marginBottom: Layout.spacing.xl,
+  },
+  formLabel: {
+    ...Typography.label,
+    marginBottom: Layout.spacing.sm,
+  },
+  formHint: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    marginBottom: Layout.spacing.md,
+  },
+  textInput: {
+    ...Layout.input,
+    ...Typography.body,
+  },
+  textArea: {
+    height: 120,
+    textAlignVertical: 'top',
+  },
+  characterCount: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    textAlign: 'right',
+    marginTop: Layout.spacing.xs,
+  },
+  rateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Layout.spacing.lg,
+  },
+  rateSymbol: {
+    ...Typography.h5,
+    color: Colors.primary,
+    marginRight: Layout.spacing.sm,
+  },
+  rateInput: {
+    flex: 1,
+    ...Typography.body,
+    color: Colors.text,
+    paddingVertical: Layout.spacing.lg,
+  },
+  applicationTips: {
+    backgroundColor: Colors.surface,
+    borderRadius: Layout.radius.md,
+    padding: Layout.spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+  },
+  tipsTitle: {
+    ...Typography.h6,
+    marginBottom: Layout.spacing.md,
+  },
+  tipsText: {
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
+    lineHeight: 18,
+  },
+  applicationModalActions: {
+    flexDirection: 'row',
+    padding: Layout.spacing.xl,
+    gap: Layout.spacing.md,
+    ...Layout.borderTop,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    paddingVertical: Layout.spacing.lg,
+    borderRadius: Layout.radius.md,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    ...Typography.button,
+    color: Colors.textMuted,
+  },
+  submitButton: {
+    flex: 2,
+    backgroundColor: Colors.primary,
+    paddingVertical: Layout.spacing.lg,
+    borderRadius: Layout.radius.md,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: Colors.card,
+    opacity: 0.5,
+  },
+  submitButtonText: {
+    ...Typography.button,
   },
 });
 

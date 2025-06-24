@@ -1,4 +1,3 @@
-
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -19,6 +18,14 @@ export default function RootLayout() {
         <Stack.Screen name="gallery-collection" />
         <Stack.Screen name="purchased-gallery" />
         
+        {/* Artist Mode Screens */}
+        <Stack.Screen name="publish-gallery" />
+        <Stack.Screen name="published-galleries" />
+        <Stack.Screen name="applied-projects" />
+        <Stack.Screen name="edit-gallery" />  //not implement
+        <Stack.Screen name="gallery-analytics" /> //not implement
+
+        
         {/* Project & Commission Screens */}
         <Stack.Screen name="projects" />
         <Stack.Screen name="post-project" />
@@ -26,6 +33,12 @@ export default function RootLayout() {
         <Stack.Screen name="my-projects" />
         <Stack.Screen name="commission-calendar" />
         <Stack.Screen name="my-drafts" />
+        
+        {/* Artist Dashboard & Management */}
+        <Stack.Screen name="artist-dashboard" /> //not implement
+        <Stack.Screen name="manage-commissions" /> //not implement
+        <Stack.Screen name="earnings-dashboard" /> //not implement
+        <Stack.Screen name="project-workspace" /> //not implement
         
         {/* Order & Payment Screens */}
         <Stack.Screen name="order-detail" />

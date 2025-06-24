@@ -35,12 +35,20 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow access to camera for QR code scanning and photo capture.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "Allow access to photos to share images in chat.",
-          "cameraPermission": "Allow access to camera to take photos in chat."
+          "photosPermission": "Allow access to photos to share images in chat and scan QR codes.",
+          "cameraPermission": "Allow access to camera to take photos in chat and scan QR codes."
         }
-      ]
+      ],
+      "expo-barcode-scanner"
     ],
     "experiments": {
       "typedRoutes": true
