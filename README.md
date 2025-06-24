@@ -15,7 +15,7 @@
 
 ## 📱 Project Overview
 
-ArtCommission Platform is a sophisticated **dual-role marketplace** built with React Native and Expo, inspired by platforms like "MiHuaShi". The app seamlessly connects artists and clients through an intuitive interface that supports both **Artist Mode** and **Client Mode**, enabling users to switch roles dynamically based on their needs.
+ArtCommission Platform is a sophisticated **dual-role marketplace** built with React Native and Expo. The app seamlessly connects artists and clients through an intuitive interface that supports both **Artist Mode** and **Client Mode**, enabling users to switch roles dynamically based on their needs.
 
 <div align="center">
 
