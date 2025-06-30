@@ -1,4 +1,4 @@
-// homepage.tsx - Enhanced with Artist Mode Support
+// homepage.tsx 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -258,7 +258,7 @@ const Homepage = () => {
     {
       id: 1,
       title: 'Long-term OC Project!',
-      description: 'Free OC contract work, any style accepted! Please specify clearly...',
+      description: 'Free OC contract work, any style accepted! Please specify clearly your art style and provide portfolio samples. Looking for creative artists who can bring original characters to life with unique personality and detailed design.',
       budget: '$200-500',
       deadline: '2025-12-31',
       clientName: 'Anonymous Client',
@@ -266,9 +266,73 @@ const Homepage = () => {
       isVerified: true,
       isHighQuality: true,
       image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
-      tags: ['Real Name Verified', 'High Quality']
+      tags: ['Real Name Verified', 'High Quality', 'Character Design', 'Original Character']
     },
-    // ... rest of project items
+    {
+      id: 2,
+      title: 'Anime Style Portrait Commission',
+      description: 'Looking for an artist who can create high-quality anime style portraits. Need detailed character design with vibrant colors and expressive features. Prefer artists with anime/manga experience.',
+      budget: '$150-300',
+      deadline: '2025-08-15',
+      clientName: 'Art Enthusiast',
+      clientAvatar: 'https://i.pravatar.cc/60?img=2',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=200&h=200&fit=crop',
+      tags: ['Verified Client', 'Anime Style', 'Portrait', 'High Quality']
+    },
+    {
+      id: 3,
+      title: 'Game Character Design Project',
+      description: 'Need multiple character designs for upcoming indie game. Looking for creative artists with experience in game art, character concepts, and fantasy themes. Will require concept art and final illustrations.',
+      budget: '$800-1200',
+      deadline: '2025-09-30',
+      clientName: 'Indie Game Studio',
+      clientAvatar: 'https://i.pravatar.cc/60?img=3',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1596815064285-45ed8a9c0463?w=200&h=200&fit=crop',
+      tags: ['Business Client', 'Game Art', 'Multiple Characters', 'Fantasy']
+    },
+    {
+      id: 4,
+      title: 'Logo Design for Startup',
+      description: 'Modern and clean logo design needed for tech startup. Looking for professional designers with corporate experience. Need vector files and brand guidelines included.',
+      budget: '$300-600',
+      deadline: '2025-07-20',
+      clientName: 'TechStart Co.',
+      clientAvatar: 'https://i.pravatar.cc/60?img=4',
+      isVerified: false,
+      isHighQuality: false,
+      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop',
+      tags: ['Logo Design', 'Corporate', 'Startup', 'Vector Art']
+    },
+    {
+      id: 5,
+      title: 'Fantasy Art Commission',
+      description: 'Epic fantasy scene with dragons and magic. Looking for artists who specialize in fantasy artwork and detailed backgrounds. Need high-resolution artwork suitable for printing.',
+      budget: '$400-800',
+      deadline: '2025-10-15',
+      clientName: 'Fantasy Lover',
+      clientAvatar: 'https://i.pravatar.cc/60?img=5',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=200&h=200&fit=crop',
+      tags: ['Fantasy Art', 'Epic Scene', 'Detailed Background', 'High Resolution']
+    },
+    {
+      id: 6,
+      title: 'Wedding Illustration Commission',
+      description: 'Custom wedding illustration for invitation cards. Need romantic, elegant style with couple portrait. Looking for artists experienced in romantic themes and soft color palettes.',
+      budget: '$250-450',
+      deadline: '2025-08-30',
+      clientName: 'Happy Couple',
+      clientAvatar: 'https://i.pravatar.cc/60?img=6',
+      isVerified: true,
+      isHighQuality: true,
+      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=200&fit=crop',
+      tags: ['Wedding Art', 'Romantic', 'Couple Portrait', 'Invitation Design']
+    }
   ];
 
   const categories = ['Recommended', 'New', 'Pre-order', 'Following'];
@@ -322,6 +386,32 @@ const Homepage = () => {
         }
       });
     }
+  };
+
+  // 🎯 NEW: Handle project card press
+  const handleProjectPress = (project: any) => {
+    console.log('Project pressed:', project.title);
+    router.push({
+      pathname: '/project-detail',
+      params: {
+        projectId: project.id,
+        title: project.title,
+        category: project.tags?.join(', ') || 'General',
+        deadline: project.deadline,
+        budget: project.budget,
+        status: 'active',
+        applicantCount: Math.floor(Math.random() * 10) + 1,
+        invitedCount: Math.floor(Math.random() * 3),
+        selectedArtistCount: 0,
+        description: project.description,
+        isRecruiting: true
+      }
+    });
+  };
+
+  const handleProjectAction = (projectId: number) => {
+    console.log('Project action:', projectId);
+    // Handle project action (bookmark, etc.)
   };
 
   // Filter handlers
@@ -590,6 +680,8 @@ const Homepage = () => {
             isHighQuality={item.isHighQuality}
             image={item.image}
             tags={item.tags}
+            onPress={handleProjectPress}
+            onActionPress={handleProjectAction}
           />
         ))}
       </View>

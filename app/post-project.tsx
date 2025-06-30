@@ -1,3 +1,4 @@
+//post-project.tsx
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -145,7 +146,7 @@ const PostProjectPage = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.images,
         allowsEditing: true,
         quality: 0.8,
         allowsMultipleSelection: true,

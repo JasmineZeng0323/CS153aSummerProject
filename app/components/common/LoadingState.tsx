@@ -1,10 +1,11 @@
+// app/components/LoadingState.tsx
 import React, { useEffect, useRef } from 'react';
 import {
-    ActivityIndicator,
-    Animated,
-    StyleSheet,
-    Text,
-    View
+  ActivityIndicator,
+  Animated,
+  StyleSheet,
+  Text,
+  View
 } from 'react-native';
 
 interface LoadingStateProps {

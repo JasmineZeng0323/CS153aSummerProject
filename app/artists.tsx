@@ -1,4 +1,4 @@
-// artists.tsx - Updated with Search Integration
+// artists.tsx 
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {

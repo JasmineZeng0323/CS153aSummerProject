@@ -1,10 +1,10 @@
-
+//app/components/common/EmptyState.tsx
 import React from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface EmptyStateProps {

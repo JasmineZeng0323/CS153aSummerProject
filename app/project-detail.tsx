@@ -1,4 +1,4 @@
-// project-detail.tsx - Enhanced with Artist Application Feature
+// project-detail.tsx 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';

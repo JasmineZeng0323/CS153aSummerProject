@@ -1,4 +1,4 @@
-
+//app/components/styles/Layout.ts
 import { ViewStyle } from 'react-native';
 import { Colors } from './Colors';
 

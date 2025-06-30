@@ -1,4 +1,4 @@
-
+//app/utils/BiometricAuth.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 

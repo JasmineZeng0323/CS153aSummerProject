@@ -2,15 +2,16 @@
  * Not been used. Want to create a universe date picker but failed to show all dates
  * there are sun --- sat, but dates shows 1---6, 7 wraps to sun again. 
  */
+//app/components/forms/DatePickerModal.tsx
 
 import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Colors } from '../styles/Colors';
 import { Layout } from '../styles/Layout';

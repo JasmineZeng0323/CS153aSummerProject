@@ -1,10 +1,11 @@
+// app/components/common/ProjectCard.tsx
 import React from 'react';
 import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Colors } from '../styles/Colors';
 import { Layout } from '../styles/Layout';

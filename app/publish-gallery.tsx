@@ -126,7 +126,7 @@ const PublishGalleryPage = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.images,
         allowsMultipleSelection: true,
         quality: 0.8,
         aspect: [1, 1],

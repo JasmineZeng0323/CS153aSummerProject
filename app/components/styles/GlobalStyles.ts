@@ -1,4 +1,4 @@
-
+//app/components/styles/GlobalStyles.ts
 import { StyleSheet } from 'react-native';
 import { Colors } from './Colors';
 import { Layout } from './Layout';

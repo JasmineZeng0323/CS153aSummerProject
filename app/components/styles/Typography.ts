@@ -1,4 +1,4 @@
-
+//app/components/styles/Typography.ts
 import { TextStyle } from 'react-native';
 import { Colors } from './Colors';
 

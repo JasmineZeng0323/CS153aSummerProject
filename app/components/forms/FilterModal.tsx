@@ -1,11 +1,12 @@
+//app/components/forms/FilterModal.tsx
 import React from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Colors } from '../styles/Colors';
 import { Layout } from '../styles/Layout';

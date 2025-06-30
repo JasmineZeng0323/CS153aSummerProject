@@ -1,3 +1,4 @@
+//app/components/BottomNavigation.tsx/DevMenu.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -5,7 +6,7 @@ import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-na
 const DevMenu = () => {
   const [visible, setVisible] = useState(false);
 
-  if (!__DEV__) return null; // 只在开发模式显示
+  if (!__DEV__) return null; 
 
   const resetActions = [
     {

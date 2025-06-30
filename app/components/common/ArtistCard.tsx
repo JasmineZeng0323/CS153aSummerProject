@@ -1,12 +1,12 @@
-
+//app/components/common/ArtistCard.tsx
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface ArtistCardProps {

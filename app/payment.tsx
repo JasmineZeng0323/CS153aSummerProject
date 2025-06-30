@@ -1,3 +1,4 @@
+//payment.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';

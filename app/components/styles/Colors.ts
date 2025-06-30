@@ -1,4 +1,4 @@
-
+//app/components/styles/Colors.ts
 export const Colors = {
   // Primary Colors
   primary: '#00A8FF',

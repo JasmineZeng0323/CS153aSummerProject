@@ -367,20 +367,16 @@ const PublishGalleryFlow = () => (
 - [x] **Payment Setup**: Payment method configuration (`add-payment-method.tsx`, `billing.tsx`)
 - [x] **Social Features**: Artist following and user management (`following-artists.tsx`, `blocked-users.tsx`)
 - [x] **Security**: Password management and user verification (`change-password.tsx`, `artist-verification.tsx`)
+- [x] **Artist Dashboard**: Manage Artist Info and Protfolio (`artist-dashboard.tsx`)
+- [x]  **Advanced Analytics**: Performance metrics and insights  (`gallery-analytics.tsx`)
 
-### 🚧 **In Development**
-- [ ] **Advanced Analytics**: Performance metrics and insights  
+### 📋 **Future Enhancements**
+- [ ] **Push Notifications**: Real-time project updates and messages
 - [ ] **Push Notifications**: Real-time updates and alerts
 - [ ] **File Management**: Enhanced document and media handling
 - [ ] **Commission Workflow**: Advanced project milestone tracking
-- [ ] **Artist Dashboard**: Manage Artist Info and Protfolio
-
-### 📋 **Planned Enhancements**
-- [ ] **Push Notifications**: Real-time project updates and messages
-- [ ] **Payment Integration**: Secure payment processing
-- [ ] **Advanced Analytics**: Detailed performance metrics
+- [ ] **project/gallery workspace**
 - [ ] **Social Features**: Artist following and community features
-- [ ] **Multi-language Support**: Internationalization
 - [ ] **AI Recommendations**: Smart artist/project matching
 
 ## 🎨 Design System

@@ -1,4 +1,4 @@
-// profile.tsx - Enhanced with Artist Mode Specific Content
+// profile.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -569,24 +569,6 @@ const ProfilePage = () => {
         </View>
         <View style={styles.orderRight}>
           <Text style={styles.orderCount}>{publishedGalleries.length} active listings</Text>
-          <Text style={styles.chevron}>›</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Earnings Section */}
-      <TouchableOpacity 
-        style={styles.orderItem}
-        onPress={handleEarningsHistory}
-      >
-        <View style={styles.orderLeft}>
-          <Text style={styles.orderIcon}>💰</Text>
-          <View style={styles.orderInfo}>
-            <Text style={styles.orderTitle}>Earnings & Payouts</Text>
-            <Text style={styles.orderSubtitle}>Income and payment history</Text>
-          </View>
-        </View>
-        <View style={styles.orderRight}>
-          <Text style={styles.orderCount}>${artistStats?.monthlyEarnings?.toLocaleString() || '2,847'} this month</Text>
           <Text style={styles.chevron}>›</Text>
         </View>
       </TouchableOpacity>

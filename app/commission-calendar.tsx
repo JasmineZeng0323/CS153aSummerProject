@@ -1,7 +1,4 @@
-/**
- * 
- * Todo: change the calender with the date picker in the component 
- */
+//commission-calendar.tsx
 
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
